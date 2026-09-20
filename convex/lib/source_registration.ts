@@ -1,4 +1,4 @@
-import { canonicalArguments } from "../../core";
+import { canonicalArguments, type Principal } from "../../core";
 import type {
 	CommitRecord,
 	Project,
@@ -18,7 +18,14 @@ export async function registerSnapshot(
 	ctx: MutationCtx,
 	input: { project: unknown; entries: unknown },
 ) {
-	const principal = await requirePrincipal(ctx);
+	return registerSnapshotForPrincipal(ctx, await requirePrincipal(ctx), input);
+}
+
+export async function registerSnapshotForPrincipal(
+	ctx: MutationCtx,
+	principal: Principal,
+	input: { project: unknown; entries: unknown },
+) {
 	const project = validate<Project>(validators.Project, input.project);
 	if (project.snapshots.length !== 1 || project.provider !== "local-git") {
 		return fail("invalid_request", "Register one local Git snapshot at a time");
@@ -128,7 +135,14 @@ export async function cacheSource(
 	ctx: MutationCtx,
 	input: { snapshotId: string; entryId: string; bytes: ArrayBuffer },
 ) {
-	const principal = await requirePrincipal(ctx);
+	return cacheSourceForPrincipal(ctx, await requirePrincipal(ctx), input);
+}
+
+export async function cacheSourceForPrincipal(
+	ctx: MutationCtx,
+	principal: Principal,
+	input: { snapshotId: string; entryId: string; bytes: ArrayBuffer },
+) {
 	const sources = new SourceAccess(ctx, principal, async (snapshotId) => {
 		const grant = await requireAccess(
 			ctx,
@@ -193,7 +207,19 @@ export async function cacheHistory(
 		complete: boolean;
 	},
 ) {
-	const principal = await requirePrincipal(ctx);
+	return cacheHistoryForPrincipal(ctx, await requirePrincipal(ctx), input);
+}
+
+export async function cacheHistoryForPrincipal(
+	ctx: MutationCtx,
+	principal: Principal,
+	input: {
+		snapshotId: string;
+		entryId?: string;
+		records: unknown;
+		complete: boolean;
+	},
+) {
 	const sources = new SourceAccess(ctx, principal, async (snapshotId) => {
 		const grant = await requireAccess(
 			ctx,
