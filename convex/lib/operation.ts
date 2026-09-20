@@ -77,6 +77,7 @@ async function authorize(
 	ctx: AuthorizedCtx,
 	request: Requests[keyof Requests],
 ): Promise<void> {
+	if ("proposal" in request) await ctx.authorizeProposal(request.proposal);
 	if ("snapshotId" in request) {
 		await ctx.loadAuthorized("snapshot", request.snapshotId);
 	}
@@ -106,7 +107,10 @@ function responseFor<K extends keyof Responses>(
 	response: unknown,
 ): Responses[K] {
 	validateResponse(id, response);
-	if (new TextEncoder().encode(JSON.stringify(response)).length > OPERATION_LIMITS.resultBytes)
+	if (
+		new TextEncoder().encode(JSON.stringify(response)).length >
+		OPERATION_LIMITS.resultBytes
+	)
 		fail("limit_exceeded", "Operation response exceeds 16 KiB");
 	return response as Responses[K];
 }
