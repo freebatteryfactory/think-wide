@@ -101,6 +101,9 @@ describe("identity mode parsing", () => {
 	});
 
 	test("the bundle default is 'none'", async () => {
+		// "Default" means the variable is absent. A release build exports
+		// VITE_THINK_WIDE_IDENTITY=workos around the gate, so do not read the ambient value.
+		vi.stubEnv("VITE_THINK_WIDE_IDENTITY", undefined);
 		vi.resetModules();
 		const { browserIdentityMode } = await import("../../src/lib/identity-mode");
 		expect(browserIdentityMode).toBe("none");
