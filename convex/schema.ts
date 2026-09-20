@@ -12,7 +12,9 @@ export default defineSchema({
 		cursorSecret: v.string(),
 		demoCatalog: v.optional(v.boolean()),
 		catalogEpoch: v.optional(v.number()),
-	}).index("by_snapshot", ["snapshotId"]).index("by_catalog", ["demoCatalog", "snapshotId"]),
+	})
+		.index("by_snapshot", ["snapshotId"])
+		.index("by_catalog", ["demoCatalog", "snapshotId"]),
 	entries: defineTable({
 		snapshotId: v.string(),
 		entryId: v.string(),

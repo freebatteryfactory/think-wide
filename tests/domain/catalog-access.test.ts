@@ -141,6 +141,12 @@ describe("public demo catalog and private human work", () => {
 			}),
 		).rejects.toMatchObject({ data: { code: "not_found" } });
 		await expect(
+			a.mutation(internal.snapshots.register, {
+				project: first.entries[0],
+				entries: [],
+			}),
+		).rejects.toMatchObject({ data: { code: "not_found" } });
+		await expect(
 			a.mutation(internal.sourceCache.put, {
 				snapshotId: "snapshot1",
 				entryId: "missing",
@@ -310,6 +316,40 @@ describe("public demo catalog and private human work", () => {
 			expect(Object.keys(stored).sort()).toEqual(
 				["_creationTime", "_id", "principal", "snapshots"].sort(),
 			);
+	});
+
+	test("private snapshots cannot be advertised and empty catalogs fail honestly", async () => {
+		const { t, a } = await fixture();
+		await t.run(async (ctx) => {
+			const row = await ctx.db
+				.query("snapshots")
+				.withIndex("by_snapshot", (q) => q.eq("snapshotId", "snapshot4"))
+				.unique();
+			if (!row) throw new Error("Missing test snapshot");
+			await ctx.db.patch(row._id, {
+				project: JSON.stringify({
+					...JSON.parse(row.project),
+					dataLabel: "private",
+				}),
+			});
+		});
+		await expect(
+			t.mutation(internal.operatorProvisioning.setDemoCatalog, {
+				ownerTokenIdentifier,
+				input: { snapshotId: "snapshot4", enabled: true },
+			}),
+		).rejects.toMatchObject({ data: { code: "invalid_request" } });
+		for (const snapshotId of ["snapshot1", "snapshot2", "snapshot3"])
+			await t.mutation(internal.operatorProvisioning.setDemoCatalog, {
+				ownerTokenIdentifier,
+				input: { snapshotId, enabled: false },
+			});
+		await expect(
+			a.mutation(api.catalog.claimDemoAccess, claim),
+		).rejects.toMatchObject({ data: { code: "capability_disabled" } });
+		expect(await t.run((ctx) => ctx.db.query("receipts").collect())).toEqual(
+			[],
+		);
 	});
 
 	test("unauthenticated and smuggled identities are rejected without grants", async () => {

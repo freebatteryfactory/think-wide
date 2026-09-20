@@ -169,7 +169,10 @@ export class SourceAccess {
 				result.truncated = { is: true, reason: "page_limit" };
 				break;
 			}
-			if (grant.revokedAt !== undefined || !(await currentCatalogGrant(this.ctx, grant))) {
+			if (
+				grant.revokedAt !== undefined ||
+				!(await currentCatalogGrant(this.ctx, grant))
+			) {
 				last = grant.resourceId;
 				continue;
 			}

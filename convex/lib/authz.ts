@@ -50,7 +50,13 @@ export async function requireAccess(
 		)
 		.collect();
 	for (const grant of grants) {
-		if (may(principal, action, { kind: resourceKind, id: resourceId }, [grant]) === "allow" && await currentCatalogGrant(ctx, grant)) return grant;
+		if (
+			may(principal, action, { kind: resourceKind, id: resourceId }, [
+				grant,
+			]) === "allow" &&
+			(await currentCatalogGrant(ctx, grant))
+		)
+			return grant;
 	}
 	return fail("not_found", "Resource not found");
 }

@@ -7,7 +7,13 @@ import type {
 	ReadOperationId,
 	StateOperationId,
 } from "../../generated/operations";
-import type { Decision, HandoffSummary, Investigation, Run, ResultEnvelope } from "../../generated/types";
+import type {
+	Decision,
+	HandoffSummary,
+	Investigation,
+	Run,
+	ResultEnvelope,
+} from "../../generated/types";
 import * as validators from "../../generated/validators.js";
 import { mutation, type QueryCtx, query } from "../_generated/server";
 import {
@@ -95,11 +101,13 @@ async function reread(
 	ctx: AuthorizedCtx,
 	result: ResultId,
 ): Promise<Investigation | Decision | Run | HandoffSummary | ResultEnvelope> {
-	if (result.resultKind === "catalog") return ctx.readCatalogClaim(result.resultId);
+	if (result.resultKind === "catalog")
+		return ctx.readCatalogClaim(result.resultId);
 	if (result.resultKind === "investigation")
 		return ctx.readInvestigation({ investigationId: result.resultId });
 	if (result.resultKind === "decision") return ctx.decision(result.resultId);
-	if (result.resultKind === "handoff") return ctx.handoffs.summary(result.resultId);
+	if (result.resultKind === "handoff")
+		return ctx.handoffs.summary(result.resultId);
 	return ctx.run(result.resultId);
 }
 

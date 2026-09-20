@@ -65,3 +65,17 @@ removed. This proves the public Git fetch path, not hosted account access.
 Full gate and disposable-backend seed/verified-JWT acceptance results are recorded
 below when actually run. Production catalog publication and hosted WorkOS account
 acceptance are NOT RUN by this branch. No shared backend or VPS is mutated.
+
+### Final local gate
+
+After merging `origin/main` at `30b4ea3` (I01), `bun run verify` exited 0:
+48 test files, 664 tests passed, no generated contract drift, TypeScript and Vite
+production build passed. This includes 8 catalog handler tests, 31 URL/IP cases
+and the catalog contract test. Earlier gate attempts exposed obsolete version,
+envelope-count and uniqueness assertions; those now explicitly permit the two
+operations sharing the projects envelope. No test is skipped or auth mocked.
+
+The coordinator ran `bunx convex dev --once` against the disposable loopback
+backend on port 43320: exit 0 (2.93 seconds). This regenerated the Convex API and
+proved the generated validators bundle with the catalog handler. Shared backends
+3210/3220 and the VPS were not used for these writes.
