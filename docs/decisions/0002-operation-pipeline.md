@@ -86,3 +86,38 @@ which checks service authority and the job, then invokes the private primitive.
 Today's operator entry points remain administrative and reject ordinary user
 contexts. No new provider, import job, worker endpoint or public ingestion
 operation is delivered here. WorkOS Pipes/GitHub connectivity belongs to I02.
+
+## Public demo catalog exception (F, owner authorized)
+
+The operator may mark an already registered `dataLabel: public` snapshot as a demo
+catalog member through an internal-only mutation. This mutable publication flag
+and its epoch are excluded from T05's immutable registration digest. Only an
+existing, non-revoked manual owner grant permits the operator change; ordinary
+user auth contexts are rejected by the existing provisioning boundary.
+
+A verified caller may run `claimDemoAccess` without supplying any source or
+principal identifier. In one transaction it creates missing **reader** snapshot
+grants for current catalog members. Existing manual grants are preserved exactly;
+no claim upgrades a role. Each new catalog grant carries the publication epoch in
+addition to its normal grant epoch. Every read/access and late publication checks
+that catalog membership and epoch remain current. Withdrawal or removal/re-add
+invalidates prior catalog grants; manual grants retain their explicit authority.
+
+Revoked grants and stale catalog grants are tombstones: neither the same request
+key nor a fresh one restores them. Conservatively, any such tombstone among the
+currently published catalog members rejects the entire new claim, even if another
+manual grant exists. An operator must resolve that situation explicitly; self
+service never repairs it. Withdrawal can leave other catalog members claimable.
+Receipts contain only a digest and a catalog-claim row ID. The claim row contains
+principal, snapshot IDs and publication epochs, never cached response bodies.
+Replays reload each snapshot through the authorized accessor and check the frozen
+publication epoch. Existing run fences additionally reload the investigation and
+all snapshots, so revoked catalog access commits a `superseded` internal outcome.
+
+`scripts/catalog-seed.ts` extends trusted operator provisioning to intentionally
+published public HTTPS Git selections. A URL alone resolves HEAD once; subsequent
+work pins that exact commit. Optional `URL@FULL_COMMIT` makes reruns reproducible.
+It uses the existing bounded Git reader without checkout or target execution,
+completes bounded source/history caches, and advertises membership last. This is
+an administrative CLI with an explicit CLI environment file and owner recipient;
+no admin key enters app code. It is not the future public import path B.

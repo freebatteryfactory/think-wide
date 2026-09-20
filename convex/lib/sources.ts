@@ -13,6 +13,7 @@ import type {
 } from "../../generated/types";
 import * as validators from "../../generated/validators.js";
 import type { QueryCtx } from "../_generated/server";
+import { currentCatalogGrant } from "./catalog";
 import { digest, gitBlobDigest, sourceCursor } from "./source_cursors";
 import { decode, fail, validate } from "./validation";
 
@@ -168,7 +169,10 @@ export class SourceAccess {
 				result.truncated = { is: true, reason: "page_limit" };
 				break;
 			}
-			if (grant.revokedAt !== undefined) {
+			if (
+				grant.revokedAt !== undefined ||
+				!(await currentCatalogGrant(this.ctx, grant))
+			) {
 				last = grant.resourceId;
 				continue;
 			}

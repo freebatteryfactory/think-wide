@@ -72,6 +72,7 @@ export interface ThinkWideContract {
 BrowseSnapshotRequest?: BrowseSnapshotRequest
 CancelRunRequest?: CancelRunRequest
 Capabilities?: Capabilities
+ClaimDemoAccessRequest?: ClaimDemoAccessRequest
 CommitRecord?: CommitRecord
 Composition?: Composition
 Decision?: Decision
@@ -144,6 +145,9 @@ githubApp: CapabilityStatus
 issuePublish: CapabilityStatus
 backendReasoning: CapabilityStatus
 outcomeIngestion: CapabilityStatus
+}
+export interface ClaimDemoAccessRequest {
+requestKey: RequestKey
 }
 /**
  * An observed commit on the pinned snapshot's first-parent history. changedPaths is the exact bounded diff against comparedTo, or the empty tree for a root commit. Over-limit records reject rather than silently truncate.

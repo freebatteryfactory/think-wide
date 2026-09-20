@@ -449,6 +449,17 @@
 					}
 				}
 			]
+		},
+		"ClaimDemoAccessRequest": {
+			"title": "ClaimDemoAccessRequest",
+			"type": "object",
+			"additionalProperties": false,
+			"required": ["requestKey"],
+			"properties": {
+				"requestKey": {
+					"$ref": "common.schema.json#/$defs/RequestKey"
+				}
+			}
 		}
 	}
 }

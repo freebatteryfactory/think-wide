@@ -55,6 +55,35 @@ export const MCP_TOOLS = [
 		}
 	},
 	{
+		"name": "claimDemoAccess",
+		"description": "Claim reader access to the operator-published public demo catalog",
+		"operationId": "claimDemoAccess",
+		"effect": "state",
+		"handler": "catalog:claimDemoAccess",
+		"inputSchema": {
+			"title": "ClaimDemoAccessRequest",
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"requestKey"
+			],
+			"properties": {
+				"requestKey": {
+					"$ref": "#/$defs/RequestKey"
+				}
+			},
+			"$defs": {
+				"RequestKey": {
+					"title": "RequestKey",
+					"description": "Caller-chosen idempotency key. Same key + same args = same result; same key + different args = conflict.",
+					"type": "string",
+					"minLength": 8,
+					"maxLength": 128
+				}
+			}
+		}
+	},
+	{
 		"name": "browseSnapshot",
 		"description": "Direct children of a tree node with metadata and exact source handles",
 		"operationId": "browseSnapshot",
@@ -1548,6 +1577,7 @@ export const MCP_TOOLS = [
 export const MCP_TOOL_NAMES = [
 	"getCapabilities",
 	"listProjects",
+	"claimDemoAccess",
 	"browseSnapshot",
 	"readSource",
 	"searchSources",
