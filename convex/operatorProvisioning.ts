@@ -1,4 +1,5 @@
-import { internalMutation } from "./_generated/server";
+import { internalMutation, internalQuery } from "./_generated/server";
+import { catalogIndexedAt, setCatalog } from "./lib/catalog";
 import { provisioningRecipient } from "./lib/operator_provisioning";
 import {
 	cacheHistoryForPrincipal,
@@ -52,3 +53,7 @@ export const cacheHistory = internalMutation({
 			args.input,
 		),
 });
+
+export const setDemoCatalog = internalMutation({ handler: setCatalog });
+
+export const getCatalogIndexedAt = internalQuery({ handler: catalogIndexedAt });

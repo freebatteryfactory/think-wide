@@ -10,7 +10,9 @@ export default defineSchema({
 		project: v.string(),
 		registrationDigest: v.string(),
 		cursorSecret: v.string(),
-	}).index("by_snapshot", ["snapshotId"]),
+		demoCatalog: v.optional(v.boolean()),
+		catalogEpoch: v.optional(v.number()),
+	}).index("by_snapshot", ["snapshotId"]).index("by_catalog", ["demoCatalog", "snapshotId"]),
 	entries: defineTable({
 		snapshotId: v.string(),
 		entryId: v.string(),
@@ -48,11 +50,16 @@ export default defineSchema({
 		role: v.union(v.literal("owner"), v.literal("reader")),
 		epoch: v.number(),
 		revokedAt: v.optional(v.number()),
+		catalogEpoch: v.optional(v.number()),
 	}).index("by_principal_resource", [
 		"principal",
 		"resourceKind",
 		"resourceId",
 	]),
+	catalogClaims: defineTable({
+		principal: v.string(),
+		snapshots: v.array(v.object({ snapshotId: v.string(), epoch: v.number() })),
+	}),
 	investigations: defineTable({ body: v.string(), cursorSecret: v.string() }),
 	decisions: defineTable({
 		investigationId: v.id("investigations"),
@@ -77,6 +84,7 @@ export default defineSchema({
 			v.literal("decision"),
 			v.literal("run"),
 			v.literal("handoff"),
+			v.literal("catalog"),
 		),
 		resultId: v.string(),
 	}).index("by_principal_operation_key", [

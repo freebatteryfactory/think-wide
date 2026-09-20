@@ -20,6 +20,7 @@ import type {
 import * as validators from "../../generated/validators.js";
 import type { Doc } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
+import { claimCatalog, currentCatalogGrant, readCatalogClaim } from "./catalog";
 import { decode, fail } from "./validation";
 import { SourceAccess } from "./sources";
 import { publishAuthorizedRun } from "./publication";
@@ -48,13 +49,10 @@ export async function requireAccess(
 				.eq("resourceId", resourceId),
 		)
 		.collect();
-	const grant = grants.find(
-		(candidate) =>
-			may(principal, action, { kind: resourceKind, id: resourceId }, [
-				candidate,
-			]) === "allow",
-	);
-	return grant ?? fail("not_found", "Resource not found");
+	for (const grant of grants) {
+		if (may(principal, action, { kind: resourceKind, id: resourceId }, [grant]) === "allow" && await currentCatalogGrant(ctx, grant)) return grant;
+	}
+	return fail("not_found", "Resource not found");
 }
 
 type ProtectedDocs = {
@@ -82,6 +80,10 @@ export class AuthorizedCtx {
 		this.sources = new SourceAccess(ctx, principal, (snapshotId) =>
 			this.requireAccess("snapshot", snapshotId),
 		);
+	}
+
+	async readCatalogClaim(id: string) {
+		return readCatalogClaim(this.#ctx, this, id);
 	}
 
 	async requireAccess(kind: ResourceKind, id: string): Promise<void> {
@@ -404,6 +406,10 @@ export class AuthorizedMutationCtx extends AuthorizedCtx {
 			role: "owner",
 			epoch: 1,
 		});
+	}
+
+	async claimDemoAccess() {
+		return claimCatalog(this.#ctx, this.principal);
 	}
 
 	async createHandoff(request: PrepareHandoffRequest): Promise<string> {
