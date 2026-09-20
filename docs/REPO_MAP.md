@@ -91,11 +91,17 @@ src/routes/projects.$projectId.tsx      T09
 src/routes/investigations.$investigationId.tsx   T09
 src/routes/handoffs.$handoffId.tsx      T09
 src/routes/workshop.tsx                 EXISTS  T03  component workshop
-src/routes/callback.tsx                 I01  WorkOS redirect
+src/routes/api/auth/callback.tsx        I01  WorkOS redirect (AuthKit serves /api/auth/callback, not /callback); 404 unless THINK_WIDE_IDENTITY=workos
+src/routes/api/auth/sign-in.tsx         I01  redirect to hosted AuthKit; 404 unless THINK_WIDE_IDENTITY=workos
+src/start.ts                            I01  request middleware: CSRF always, AuthKit only when THINK_WIDE_IDENTITY=workos
 src/routes/api/ops.$operationId.ts      T08  HTTP adapter
 src/routes/api/mcp.ts                   T08  MCP streamable HTTP endpoint
 
 src/lib/utils.ts                        TOOL: shadcn
+src/lib/identity-mode.ts                I01  "workos" | "none"; VITE_THINK_WIDE_IDENTITY (build) and the shared parser. A mode name, never a credential
+src/integrations/convex/provider.tsx    TOOL, then I01  bare ConvexProvider (mode none) or ConvexProviderWithAuth (mode workos); no backend URL still renders
+src/integrations/workos/provider.tsx    I01  AuthKitProvider, mounted only in mode workos
+src/integrations/workos/convex-auth.ts  I01  useAuth adapter: the signed-in person's own access token -> Convex, null when signed out
 src/components/ui/*                     TOOL: shadcn add
 src/components/catalog/EvidencePair.tsx        EXISTS  T03
 src/components/catalog/ConnectionCard.tsx      EXISTS  T03
@@ -125,7 +131,7 @@ src/server/ops/dispatch.ts              T08  one path: validate -> authorize -> 
 src/server/ops/handlers/*.ts            T05..T09  one file per operationId
 src/server/mcp/server.ts                T08
 src/server/mcp/tools.ts                 T08  built from generated/mcp-tools.ts + generated/operations.ts, explicit exposure only; restates nothing
-src/server/auth/workos.ts               I01
+src/server/auth/workos.ts               I01  server identity switch (THINK_WIDE_IDENTITY); holds no credential
 src/server/auth/verify-token.ts         I01  issuer, JWKS, audience
 src/server/git/snapshot.ts              T05  resolve ref once -> full commit id
 src/server/git/tree.ts                  T05  git ls-tree -z
