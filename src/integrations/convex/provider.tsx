@@ -1,5 +1,7 @@
 import { ConvexQueryClient } from "@convex-dev/react-query";
-import { ConvexProvider } from "convex/react";
+import { ConvexProvider, ConvexProviderWithAuth } from "convex/react";
+import { browserIdentityMode } from "../../lib/identity-mode";
+import { useWorkOSConvexAuth } from "../workos/convex-auth";
 
 // Vite inlines VITE_* at BUILD time. A production image built without this variable used to
 // throw while this module loaded (`new ConvexQueryClient(undefined)`), which turned every page,
@@ -27,6 +29,20 @@ export default function AppConvexProvider({
 	if (!convexQueryClient) {
 		return <>{children}</>;
 	}
+	if (browserIdentityMode === "workos") {
+		// I01: the signed-in person's own access token reaches Convex through the adapter.
+		// Requires AuthKitProvider above this component (src/integrations/workos/provider.tsx).
+		return (
+			<ConvexProviderWithAuth
+				client={convexQueryClient.convexClient}
+				useAuth={useWorkOSConvexAuth}
+			>
+				{children}
+			</ConvexProviderWithAuth>
+		);
+	}
+	// Identity mode "none": exactly what main shipped before I01. No token is ever requested,
+	// so every handler answers `unauthenticated`.
 	return (
 		<ConvexProvider client={convexQueryClient.convexClient}>
 			{children}
