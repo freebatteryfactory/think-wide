@@ -6,7 +6,8 @@ import { describe, expect, test } from "vitest";
 
 // I01 / AGENTS.md rule 12: browser code never holds a server credential. Everything under
 // src/components, src/integrations, src/lib and src/routes ships to (or is reachable from)
-// the browser bundle, EXCEPT src/routes/api/**, whose handlers are server-only.
+// the browser bundle, EXCEPT src/routes/api/** and the strictly checked OAuth
+// metadata route, whose handlers are server-only.
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const SERVER_DIR = join(ROOT, "src", "server");
@@ -17,6 +18,86 @@ const BROWSER_DIRS = [
 	"src/routes",
 ];
 const SERVER_ONLY_ROUTES = join(ROOT, "src", "routes", "api") + sep;
+
+const METADATA_ROUTE = join(
+	ROOT,
+	"src",
+	"routes",
+	"[.]well-known.oauth-protected-resource.ts",
+);
+
+// OAuth metadata must be at the standard root URL, outside /api. Exempt only
+// this exact route and only its allowlisted server-only module shape.
+function serverOnlyMetadataRoute(path: string, text: string): boolean {
+	if (path !== METADATA_ROUTE) return false;
+	const source = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true);
+	const declarations = source.statements.filter(ts.isVariableStatement);
+	if (declarations.length !== 1 || source.statements.length !== 3) return false;
+	const statement = declarations[0];
+	if (
+		statement.modifiers?.length !== 1 ||
+		statement.modifiers[0].kind !== ts.SyntaxKind.ExportKeyword ||
+		!(statement.declarationList.flags & ts.NodeFlags.Const) ||
+		statement.declarationList.declarations.length !== 1
+	)
+		return false;
+	const declaration = statement.declarationList.declarations[0];
+	if (
+		!ts.isIdentifier(declaration.name) ||
+		declaration.name.text !== "Route" ||
+		!declaration.initializer ||
+		!ts.isCallExpression(declaration.initializer)
+	)
+		return false;
+	const call = declaration.initializer;
+	const factory = call.expression;
+	if (
+		!ts.isCallExpression(factory) ||
+		!ts.isIdentifier(factory.expression) ||
+		factory.expression.text !== "createFileRoute" ||
+		factory.arguments.length !== 1 ||
+		!ts.isStringLiteral(factory.arguments[0]) ||
+		factory.arguments[0].text !== "/.well-known/oauth-protected-resource" ||
+		call.arguments.length !== 1 ||
+		!ts.isObjectLiteralExpression(call.arguments[0])
+	)
+		return false;
+	const options = call.arguments[0].properties;
+	if (
+		options.length !== 1 ||
+		!ts.isPropertyAssignment(options[0]) ||
+		!ts.isIdentifier(options[0].name) ||
+		options[0].name.text !== "server" ||
+		!ts.isObjectLiteralExpression(options[0].initializer)
+	)
+		return false;
+	const allowedImports = new Map([
+		["@tanstack/react-router", "createFileRoute"],
+		["../server/http", "protectedResourceMetadata"],
+	]);
+	for (const node of source.statements) {
+		if (node === statement) continue;
+		if (
+			!ts.isImportDeclaration(node) ||
+			!ts.isStringLiteral(node.moduleSpecifier)
+		)
+			return false;
+		const expected = allowedImports.get(node.moduleSpecifier.text);
+		const bindings = node.importClause?.namedBindings;
+		if (
+			!expected ||
+			node.importClause?.name ||
+			!bindings ||
+			!ts.isNamedImports(bindings) ||
+			bindings.elements.length !== 1 ||
+			bindings.elements[0].propertyName ||
+			bindings.elements[0].name.text !== expected
+		)
+			return false;
+		allowedImports.delete(node.moduleSpecifier.text);
+	}
+	return allowedImports.size === 0;
+}
 
 const FORBIDDEN_PACKAGES = ["@workos-inc/node"];
 const SERVER_ENV_NAMES = [
@@ -38,7 +119,11 @@ function walk(directory: string, keep: (path: string) => boolean): string[] {
 function browserFiles(): string[] {
 	return BROWSER_DIRS.flatMap((directory) =>
 		walk(join(ROOT, directory), (path) => /\.[cm]?tsx?$/.test(path)),
-	).filter((path) => !path.startsWith(SERVER_ONLY_ROUTES));
+	).filter(
+		(path) =>
+			!path.startsWith(SERVER_ONLY_ROUTES) &&
+			!serverOnlyMetadataRoute(path, readFileSync(path, "utf8")),
+	);
 }
 
 function moduleSpecifiers(path: string, text: string): string[] {
@@ -155,7 +240,7 @@ describe("I01 browser boundary", () => {
 		expect(violations(probe, fine)).toEqual([]);
 	});
 
-	test("src/routes/api/** is the only part of src/routes that is exempt", () => {
+	test("only API routes and the checked server-only metadata route are exempt", () => {
 		const files = browserFiles().map((path) => relative(ROOT, path));
 		expect(files).toContain(join("src", "routes", "__root.tsx"));
 		expect(files).toContain(
@@ -167,6 +252,41 @@ describe("I01 browser boundary", () => {
 		expect(
 			files.some((path) => path.startsWith(join("src", "routes", "api"))),
 		).toBe(false);
+	});
+
+	test("metadata exemption rejects client options, spreads, computed keys and exports", () => {
+		const source = readFileSync(METADATA_ROUTE, "utf8");
+		expect(serverOnlyMetadataRoute(METADATA_ROUTE, source)).toBe(true);
+		expect(
+			serverOnlyMetadataRoute(join(ROOT, "src/routes/other.ts"), source),
+		).toBe(false);
+		for (const addition of [
+			"component: () => null,",
+			"loader: () => null,",
+			"beforeLoad: () => null,",
+			"unknownOption: true,",
+			"...extra,",
+		]) {
+			expect(
+				serverOnlyMetadataRoute(
+					METADATA_ROUTE,
+					source.replace("server:", `${addition} server:`),
+				),
+				addition,
+			).toBe(false);
+		}
+		for (const changed of [
+			source.replace("server:", '["server"]:'),
+			`${source}\nexport const Other = 1;`,
+			`${source}\nexport default Route;`,
+			source.replace(
+				"import { protectedResourceMetadata }",
+				"import * as protectedResourceMetadata",
+			),
+			source.replace("export const Route", "const Route"),
+		]) {
+			expect(serverOnlyMetadataRoute(METADATA_ROUTE, changed)).toBe(false);
+		}
 	});
 
 	test("no browser file imports @workos-inc/node or src/server, or names a server credential", () => {

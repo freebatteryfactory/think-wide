@@ -141,3 +141,22 @@ smaller than the direct operation limit. Responses are no-store.
   OAuth-profile amendment; they do not prove the amended OAuth consent flow.
 - Vite generated `src/routeTree.gen.ts`; it was not hand-edited. Public bundle
   scan found no JWKS URL construction, WORKOS_CLIENT_ID or verifier implementation.
+
+### After integration with I01 main (`30b4ea3`)
+
+The first integrated gate failed one structural test: it assumed every route
+outside `/api` was browser code. The exact standard metadata route now has a
+narrow AST allowlist (only the two named imports and server-only route export).
+Client options, spreads, computed keys and additional exports invalidate the
+exemption; in-memory negative probes cover them. Scope was approved and recorded
+on issue #17. No production identity-owned file was edited.
+
+- Final `bun run verify`: **exit 0, 661 tests / 46 files**.
+- Targeted HTTP + structural suite: **43 tests / 2 files**, exit 0.
+- Repeated amended production Node probes on disposable port 3182: MCP 401 with
+  resource-metadata challenge; browser API 401 with its own Bearer realm; metadata
+  200 with configured AuthKit `authorization_servers`. Server stopped afterward.
+- Repeated client-output scan: no JWKS URL construction, MCP_AUTHORIZATION_SERVER,
+  verifyMcpToken or WORKOS_CLIENT_ID in public assets.
+
+Actual OAuth token exchange/consent and subject comparison remain **NOT RUN**.
