@@ -1,6 +1,6 @@
 # T08 local setup follow-up — ready for adversarial QA
 
-Issue #21; PR #29; integrated with main `76c193b`. The published branch was
+Issue #21; PR #29; integrated with main `8ba4302` (after `76c193b`). The published branch was
 updated by merging main, preserving its shared history without a force-push.
 No dependency, lockfile, public contract, website or WorkOS changes.
 
@@ -73,9 +73,11 @@ Run from the `t08-local-setup` worktree on 2026-09-20:
   exit 0; 13 tests across 2 files after the listing fix.
 - `bun run typecheck`: exit 0.
 - `bun tests/adapter/t08-local-live.ts`: exit 0; live acceptance below.
-- `bun run verify`: exit 0; **584 tests across 39 files**, no skipped tests;
+- `bun run verify`: exit 0; **585 tests across 39 files**, no skipped tests;
   frozen install, contract drift, Biome, TypeScript and production build passed.
-  Build emits existing dependency `use client` directive warnings.
+  The earlier gate on main `76c193b` passed 584 tests; main's browser follow-up
+  added one default-suite test. Biome emits existing non-failing warnings/infos;
+  the build emits existing dependency `use client` directive warnings.
 
 The explicit live script is separate from fixture CI because it requires a
 running, seeded local backend and writes synthetic acceptance records. It does
