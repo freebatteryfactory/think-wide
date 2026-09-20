@@ -22,6 +22,8 @@ import { PrepareBrief } from "./PrepareBrief";
 import { SnapshotBrowser } from "./SnapshotBrowser";
 import {
 	appendDecisionPage,
+	type DecisionDraft,
+	decisionCategoryLabels,
 	decisionCommand,
 	decisionLabels,
 	operationError,
@@ -46,9 +48,10 @@ export function InvestigationWorkbench({
 		request: { investigationId },
 	});
 	const fieldId = useId();
-	const [draft, setDraft] = useState<
-		Pick<RecordDecisionRequest, "kind" | "statement">
-	>({ kind: "constraint", statement: "" });
+	const [draft, setDraft] = useState<DecisionDraft>({
+		kind: "constraint",
+		statement: "",
+	});
 	const [references, setReferences] = useState<SourceRef[]>([]);
 	const [sourceSnapshot, setSourceSnapshot] = useState<string>();
 	const [baseRevision, setBaseRevision] = useState<number>();
@@ -117,7 +120,7 @@ export function InvestigationWorkbench({
 		setMessage("");
 		try {
 			const saved = await recordDecision({ request });
-			setDraft({ kind: draft.kind, statement: "" });
+			setDraft({ ...draft, statement: "" });
 			setReferences([]);
 			setBaseRevision(undefined);
 			setPending(undefined);
@@ -225,8 +228,11 @@ export function InvestigationWorkbench({
 						{decisions.map((decision) => (
 							<li key={decision.decisionId} className="space-y-2 border-t pt-3">
 								<p className="font-medium">
-									{decisionLabels[decision.kind]} · revision{" "}
-									{decision.resultingRevision}
+									{decisionLabels[decision.kind]}
+									{decision.category
+										? ` / ${decisionCategoryLabels[decision.category]}`
+										: ""}{" "}
+									· revision {decision.resultingRevision}
 								</p>
 								<p className="whitespace-pre-wrap break-words">
 									{decision.statement}

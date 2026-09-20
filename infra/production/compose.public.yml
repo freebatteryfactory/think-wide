@@ -1,5 +1,10 @@
-# Activation is a later reviewed release after I01 + browser gateway acceptance.
+# Activation is a later reviewed release after I01 + browser acceptance.
 # No bootstrap or preparation command uses this file.
 services:
+  backend:
+    environment:
+      CONVEX_CLOUD_ORIGIN: https://convex.think-wide.fbf.systems
   ingress:
+    # The public proxy alone joins both networks to reach app and Convex API.
+    networks: [edge, private]
     ports: ["80:80", "443:443"]

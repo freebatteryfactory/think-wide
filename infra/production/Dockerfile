@@ -10,7 +10,8 @@ COPY . .
 # Vite embeds this public URL at build time. Runtime env cannot change it.
 # I01/T09 own browser identity; an origin alone never proves authenticated access.
 ARG VITE_CONVEX_URL
-ENV VITE_CONVEX_URL=${VITE_CONVEX_URL}
+ARG VITE_THINK_WIDE_IDENTITY=workos
+ENV VITE_CONVEX_URL=${VITE_CONVEX_URL} VITE_THINK_WIDE_IDENTITY=${VITE_THINK_WIDE_IDENTITY}
 RUN bun run build && bun build src/server/config.ts --target=node --format=esm --outfile=production-config.mjs
 
 FROM ${NODE_IMAGE} AS runtime
