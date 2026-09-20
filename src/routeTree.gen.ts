@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkshopRouteImport } from './routes/workshop'
+import { Route as HandoffsHandoffIdRouteImport } from './routes/handoffs.$handoffId'
+import { Route as InvestigationsInvestigationIdRouteImport } from './routes/investigations.$investigationId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +24,63 @@ const WorkshopRoute = WorkshopRouteImport.update({
   path: '/workshop',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HandoffsHandoffIdRoute = HandoffsHandoffIdRouteImport.update({
+  id: '/handoffs/$handoffId',
+  path: '/handoffs/$handoffId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InvestigationsInvestigationIdRoute =
+  InvestigationsInvestigationIdRouteImport.update({
+    id: '/investigations/$investigationId',
+    path: '/investigations/$investigationId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/workshop': typeof WorkshopRoute
+  '/handoffs/$handoffId': typeof HandoffsHandoffIdRoute
+  '/investigations/$investigationId': typeof InvestigationsInvestigationIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/workshop': typeof WorkshopRoute
+  '/handoffs/$handoffId': typeof HandoffsHandoffIdRoute
+  '/investigations/$investigationId': typeof InvestigationsInvestigationIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/workshop': typeof WorkshopRoute
+  '/handoffs/$handoffId': typeof HandoffsHandoffIdRoute
+  '/investigations/$investigationId': typeof InvestigationsInvestigationIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/workshop'
+  fullPaths:
+    | '/'
+    | '/workshop'
+    | '/handoffs/$handoffId'
+    | '/investigations/$investigationId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/workshop'
-  id: '__root__' | '/' | '/workshop'
+  to:
+    | '/'
+    | '/workshop'
+    | '/handoffs/$handoffId'
+    | '/investigations/$investigationId'
+  id:
+    | '__root__'
+    | '/'
+    | '/workshop'
+    | '/handoffs/$handoffId'
+    | '/investigations/$investigationId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   WorkshopRoute: typeof WorkshopRoute
+  HandoffsHandoffIdRoute: typeof HandoffsHandoffIdRoute
+  InvestigationsInvestigationIdRoute: typeof InvestigationsInvestigationIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +99,28 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkshopRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/handoffs/$handoffId': {
+      id: '/handoffs/$handoffId'
+      path: '/handoffs/$handoffId'
+      fullPath: '/handoffs/$handoffId'
+      preLoaderRoute: typeof HandoffsHandoffIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/investigations/$investigationId': {
+      id: '/investigations/$investigationId'
+      path: '/investigations/$investigationId'
+      fullPath: '/investigations/$investigationId'
+      preLoaderRoute: typeof InvestigationsInvestigationIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   WorkshopRoute: WorkshopRoute,
+  HandoffsHandoffIdRoute: HandoffsHandoffIdRoute,
+  InvestigationsInvestigationIdRoute: InvestigationsInvestigationIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
