@@ -23,3 +23,17 @@ jobs:
           bun-version-file: package.json
       # Same entry point as local: frozen install, lint, typecheck, tests, build.
       - run: bun run verify
+
+  browser:
+    # Real-browser acceptance for the UI. Separate from `verify` on purpose: it needs a Chromium
+    # download, so it is informative, not a required check. A skip here is not a pass.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      - run: bun run test:browser

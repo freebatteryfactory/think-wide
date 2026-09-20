@@ -19,11 +19,39 @@ bun install --frozen-lockfile
 bun run convex:up                 # self-hosted Convex on 127.0.0.1:3210 (dashboard :6791)
 cp .env.example .env.local
 bun run convex:key                # paste the output into CONVEX_SELF_HOSTED_ADMIN_KEY in .env.local
-bun run convex:dev                # pushes convex/ functions, regenerates convex/_generated, watches
+bun run convex:dev                # pushes Convex functions and watches
 bun run dev                       # http://localhost:3000
 ```
 
+### Local headless setup
+
+After configuring the local backend URL and admin credential in `.env.local`, set
+`THINK_WIDE_MODE=local-demo` there and run:
+
+```bash
+bun run local:setup
+bun run mcp:stdio
+```
+
+Setup configures the local issuer, pushes this checkout's Convex functions, and
+registers the committed synthetic alpha/beta snapshots for the local principal.
+It accepts no arguments and refuses production or non-loopback targets. The admin
+credential is used only by this operator CLI; normal MCP calls use short-lived
+user JWTs. Git reading never executes the repositories' code.
+
+Repeating setup reuses the same immutable snapshots and private signing key,
+completes interrupted cache writes, and preserves revocation. It does not reset
+the database. Do not point another checkout at an active shared backend unless
+its ignored signing key is the same: configuring a new key changes local trust.
+Restart your MCP client after upgrading so its tool list refreshes.
+
+For explicit **live** acceptance after setup (creates labeled synthetic investigation,
+decision and brief rows): `bun tests/adapter/t08-local-live.ts`.
+See [commands, evidence and limits](docs/evidence/T08-local-setup.md).
+
 Before every push: `bun run verify` (same command CI runs).
+
+Real-browser checks (focus rings, hover, self-hosted fonts, mobile layout, no console errors, no off-origin requests) are a separate opt-in suite: `bun run browser:install` once, then `bun run test:browser`. Without Chromium it skips and says so; a skip is not a pass.
 
 Only Eassa changes `package.json` / `bun.lock`. Everyone else installs with `--frozen-lockfile`.
 

@@ -14,6 +14,8 @@
     "check": "biome check",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
+    "test:browser": "vitest run --config vitest.browser.config.ts",
+    "browser:install": "playwright install chromium",
     "convex:up": "docker compose -f infra/docker-compose.yml up -d --wait",
     "convex:key": "docker compose -f infra/docker-compose.yml exec backend ./generate_admin_key.sh",
     "convex:dev": "convex dev",
@@ -21,7 +23,8 @@
     "verify": "bun install --frozen-lockfile && bun run check:drift && biome check && tsc --noEmit && vitest run --passWithNoTests && vite build",
     "codegen": "bun scripts/codegen.ts",
     "check:drift": "bun scripts/check-drift.ts",
-    "mcp:stdio": "bun src/server/mcp/stdio.ts"
+    "mcp:stdio": "bun src/server/mcp/stdio.ts",
+    "local:setup": "bun scripts/local-setup.ts"
   },
   "dependencies": {
     "@ast-grep/cli": "0.45.3",
@@ -64,6 +67,7 @@
     "@vitejs/plugin-react": "^6.0.1",
     "convex-test": "0.0.59",
     "json-schema-to-typescript": "^16.0.0",
+    "playwright-chromium": "1.63.0",
     "typescript": "^6.0.2",
     "vite": "^8.0.0",
     "vitest": "^5.0.1"
