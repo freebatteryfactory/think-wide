@@ -7,7 +7,7 @@ import { fail } from "./validation";
  * Public/user-context invocations cannot use this provisioning exception.
  */
 export async function provisioningRecipient(
-	ctx: MutationCtx,
+	ctx: Pick<MutationCtx, "auth">,
 	args: { ownerTokenIdentifier: string; input: unknown },
 ): Promise<Principal> {
 	if (await ctx.auth.getUserIdentity())

@@ -9,10 +9,12 @@
  */
 
 import type * as capabilities from "../capabilities.js";
+import type * as catalog from "../catalog.js";
 import type * as decisions from "../decisions.js";
 import type * as handoffs from "../handoffs.js";
 import type * as investigations from "../investigations.js";
 import type * as lib_authz from "../lib/authz.js";
+import type * as lib_catalog from "../lib/catalog.js";
 import type * as lib_handoffs from "../lib/handoffs.js";
 import type * as lib_operation from "../lib/operation.js";
 import type * as lib_operator_provisioning from "../lib/operator_provisioning.js";
@@ -38,10 +40,12 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   capabilities: typeof capabilities;
+  catalog: typeof catalog;
   decisions: typeof decisions;
   handoffs: typeof handoffs;
   investigations: typeof investigations;
   "lib/authz": typeof lib_authz;
+  "lib/catalog": typeof lib_catalog;
   "lib/handoffs": typeof lib_handoffs;
   "lib/operation": typeof lib_operation;
   "lib/operator_provisioning": typeof lib_operator_provisioning;

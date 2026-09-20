@@ -226,13 +226,14 @@ describe("generated validators (contract 0.2.0)", () => {
 		const envelopeOps = OPERATIONS.filter(
 			(o) => o.response === "envelope.schema.json",
 		);
-		expect(envelopeOps.length).toBe(5);
+		expect(envelopeOps.length).toBe(6);
 		for (const o of envelopeOps)
 			expect((o as { envelopeKind?: string }).envelopeKind).toBeTruthy();
 		const kinds = envelopeOps.map(
 			(o) => (o as { envelopeKind?: string }).envelopeKind,
 		);
-		expect(new Set(kinds).size).toBe(kinds.length);
+		expect(kinds.filter((kind) => kind === "projects")).toHaveLength(2);
+		expect(new Set(kinds).size).toBe(kinds.length - 1);
 		for (const o of OPERATIONS.filter(
 			(x) => x.response !== "envelope.schema.json",
 		))

@@ -3,6 +3,7 @@ import type {
 	BrowseSnapshotRequest,
 	CancelRunRequest,
 	Capabilities,
+	ClaimDemoAccessRequest,
 	Decision,
 	Evidence,
 	GetCapabilitiesRequest,
@@ -26,7 +27,7 @@ import type {
 	SubmitProposalRequest,
 } from "./types";
 
-export const CONTRACT_VERSION = "0.4.0" as const;
+export const CONTRACT_VERSION = "0.5.0" as const;
 
 export const OPERATIONS = [
 	{
@@ -64,6 +65,26 @@ export const OPERATIONS = [
 		"profile": "required",
 		"ticket": "T05",
 		"requestType": "ListProjectsRequest",
+		"responseType": "ResultEnvelope",
+		"entriesType": "Project"
+	},
+	{
+		"operationId": "claimDemoAccess",
+		"summary": "Claim reader access to the operator-published public demo catalog",
+		"request": "requests.schema.json#/$defs/ClaimDemoAccessRequest",
+		"response": "envelope.schema.json",
+		"envelopeKind": "projects",
+		"entries": "project.schema.json",
+		"effect": "state",
+		"handler": "catalog:claimDemoAccess",
+		"exposure": [
+			"http",
+			"mcp"
+		],
+		"approval": false,
+		"profile": "required",
+		"ticket": "F",
+		"requestType": "ClaimDemoAccessRequest",
 		"responseType": "ResultEnvelope",
 		"entriesType": "Project"
 	},
@@ -354,6 +375,7 @@ export const MCP_EXPOSED: readonly OperationId[] = OPERATIONS.filter((o) =>
 export type OperationRequestMap = {
 	getCapabilities: GetCapabilitiesRequest;
 	listProjects: ListProjectsRequest;
+	claimDemoAccess: ClaimDemoAccessRequest;
 	browseSnapshot: BrowseSnapshotRequest;
 	readSource: ReadSourceRequest;
 	searchSources: SearchSourcesRequest;
@@ -373,6 +395,7 @@ export type OperationRequestMap = {
 export type OperationResponseMap = {
 	getCapabilities: Capabilities;
 	listProjects: ResultEnvelope;
+	claimDemoAccess: ResultEnvelope;
 	browseSnapshot: ResultEnvelope;
 	readSource: Evidence;
 	searchSources: ResultEnvelope;
@@ -392,13 +415,14 @@ export type OperationResponseMap = {
 
 /** Operation ids by effect class. */
 export type ReadOperationId = "getCapabilities" | "listProjects" | "browseSnapshot" | "readSource" | "searchSources" | "readHistory" | "readGuidance" | "readInvestigation" | "getRun" | "readHandoff";
-export type StateOperationId = "openInvestigation" | "recordDecision" | "submitProposal" | "beginHostRun" | "requestAnalysis" | "cancelRun" | "prepareHandoff";
+export type StateOperationId = "claimDemoAccess" | "openInvestigation" | "recordDecision" | "submitProposal" | "beginHostRun" | "requestAnalysis" | "cancelRun" | "prepareHandoff";
 export type ExternalOperationId = never;
 
 /** "<convexModule>:<exportName>" of the Convex function implementing each operation. */
 export const OPERATION_HANDLERS = {
 	"getCapabilities": "capabilities:getCapabilities",
 	"listProjects": "projects:listProjects",
+	"claimDemoAccess": "catalog:claimDemoAccess",
 	"browseSnapshot": "snapshots:browseSnapshot",
 	"readSource": "sourceCache:readSource",
 	"readHistory": "snapshots:readHistory",

@@ -4,6 +4,7 @@ export interface Validator { (data: unknown): boolean; errors?: ErrorObject[] | 
 export declare const BrowseSnapshotRequest: Validator;
 export declare const CancelRunRequest: Validator;
 export declare const Capabilities: Validator;
+export declare const ClaimDemoAccessRequest: Validator;
 export declare const CommitRecord: Validator;
 export declare const Composition: Validator;
 export declare const Decision: Validator;

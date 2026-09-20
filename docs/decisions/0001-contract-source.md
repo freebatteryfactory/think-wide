@@ -119,3 +119,18 @@ with `limit_exceeded`; findings stay `unverified`. Public fence rejection throws
 and rolls back all writes. Internal publication returns its rejection outcome so
 its `superseded` status persists. Human decisions already supersede current active
 runs in their own transaction. No scheduler or provider call is added.
+
+## Contract 0.5.0: shared public demo catalog (F)
+
+`claimDemoAccess` is a state operation exposed through HTTP and MCP. Its only
+request field is `requestKey`; the caller comes from verified identity. It claims
+reader access to the internally published public catalog and returns the existing
+`projects` envelope. Generated operation bindings, descriptors, validators and
+request/response maps are the only adapter inventory changes.
+
+The catalog contains at most eight snapshots, matching the envelope scope bound.
+The ordinary 16 KiB response cap still applies: excessive project metadata rolls
+back the whole claim rather than silently omitting entries. There is no catalog
+pagination. A new request key sees catalog additions; receipt replay returns its
+original snapshot set and rechecks current authorization and catalog epochs.
+This operation shares immutable sources, never investigations, decisions or briefs.
