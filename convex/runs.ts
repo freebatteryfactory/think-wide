@@ -18,6 +18,23 @@ export const admitRun = operation.mutation(
 		}),
 	}),
 );
+/** Host admission shares the same atomic revision/epoch fence as backend admission.
+ * A host's budget is declarative: this service never dispatches its model calls. */
+export const beginHostRun = operation.mutation(
+	"beginHostRun",
+	async (ctx, request) => ({
+		resultKind: "run",
+		resultId: await ctx.createRun({
+			investigationId: request.investigationId,
+			baseRevision: request.expectedRevision,
+			driver: "host",
+			status: "admitted",
+			purpose: request.purpose,
+			...(request.budget ? { budget: request.budget } : {}),
+			admittedAt: Date.now(),
+		}),
+	}),
+);
 export const getRun = operation.query("getRun", (ctx, request) =>
 	ctx.run(request.runId),
 );

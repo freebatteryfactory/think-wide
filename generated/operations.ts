@@ -26,7 +26,7 @@ import type {
 	SubmitProposalRequest,
 } from "./types";
 
-export const CONTRACT_VERSION = "0.3.0" as const;
+export const CONTRACT_VERSION = "0.4.0" as const;
 
 export const OPERATIONS = [
 	{
@@ -230,8 +230,27 @@ export const OPERATIONS = [
 		"approval": false,
 		"profile": "required",
 		"ticket": "T10",
+		"handler": "proposals:submitProposal",
 		"requestType": "SubmitProposalRequest",
 		"responseType": "Investigation",
+		"entriesType": null
+	},
+	{
+		"operationId": "beginHostRun",
+		"summary": "Admit a host reasoning run before analysis; no model call is dispatched",
+		"request": "requests.schema.json#/$defs/RequestAnalysisRequest",
+		"response": "run.schema.json",
+		"effect": "state",
+		"handler": "runs:beginHostRun",
+		"exposure": [
+			"http",
+			"mcp"
+		],
+		"approval": false,
+		"profile": "required",
+		"ticket": "T10",
+		"requestType": "RequestAnalysisRequest",
+		"responseType": "Run",
 		"entriesType": null
 	},
 	{
@@ -344,6 +363,7 @@ export type OperationRequestMap = {
 	readInvestigation: ReadInvestigationRequest;
 	recordDecision: RecordDecisionRequest;
 	submitProposal: SubmitProposalRequest;
+	beginHostRun: RequestAnalysisRequest;
 	requestAnalysis: RequestAnalysisRequest;
 	getRun: GetRunRequest;
 	cancelRun: CancelRunRequest;
@@ -362,6 +382,7 @@ export type OperationResponseMap = {
 	readInvestigation: Investigation;
 	recordDecision: Decision;
 	submitProposal: Investigation;
+	beginHostRun: Run;
 	requestAnalysis: Run;
 	getRun: Run;
 	cancelRun: Run;
@@ -371,7 +392,7 @@ export type OperationResponseMap = {
 
 /** Operation ids by effect class. */
 export type ReadOperationId = "getCapabilities" | "listProjects" | "browseSnapshot" | "readSource" | "searchSources" | "readHistory" | "readGuidance" | "readInvestigation" | "getRun" | "readHandoff";
-export type StateOperationId = "openInvestigation" | "recordDecision" | "submitProposal" | "requestAnalysis" | "cancelRun" | "prepareHandoff";
+export type StateOperationId = "openInvestigation" | "recordDecision" | "submitProposal" | "beginHostRun" | "requestAnalysis" | "cancelRun" | "prepareHandoff";
 export type ExternalOperationId = never;
 
 /** "<convexModule>:<exportName>" of the Convex function implementing each operation. */
@@ -384,6 +405,8 @@ export const OPERATION_HANDLERS = {
 	"openInvestigation": "investigations:openInvestigation",
 	"readInvestigation": "investigations:readInvestigation",
 	"recordDecision": "decisions:recordDecision",
+	"submitProposal": "proposals:submitProposal",
+	"beginHostRun": "runs:beginHostRun",
 	"requestAnalysis": "runs:admitRun",
 	"getRun": "runs:getRun",
 	"cancelRun": "runs:cancelRun",
@@ -395,6 +418,5 @@ export type ImplementedOperationId = keyof typeof OPERATION_HANDLERS;
 /** Registered operations with no handler binding yet. */
 export const UNIMPLEMENTED_OPERATIONS = [
 	"searchSources",
-	"readGuidance",
-	"submitProposal"
+	"readGuidance"
 ] as const satisfies readonly OperationId[];

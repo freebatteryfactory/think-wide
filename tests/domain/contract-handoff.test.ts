@@ -22,7 +22,7 @@ const summary = {
 	preparedAt: 100,
 };
 test("contract 0.3.0 returns a bounded summary and rejects extra identity fields", () => {
-	expect(CONTRACT_VERSION).toBe("0.3.0");
+	expect(CONTRACT_VERSION).toBe("0.4.0");
 	expect(HandoffSummary(summary)).toBe(true);
 	expect(HandoffRead(summary)).toBe(true);
 	expect(HandoffRead({ ...summary, actor: "someone" })).toBe(false);

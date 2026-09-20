@@ -1,0 +1,15 @@
+.git
+node_modules
+.output
+.nitro
+.tanstack
+.vinxi
+.env*
+**/.env*
+infra/.data
+**/*.local
+**/*.pem
+**/*.key
+coverage
+playwright-report
+test-results

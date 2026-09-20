@@ -27,6 +27,7 @@ import type * as lib_source_registration from "../lib/source_registration.js";
 import type * as lib_sources from "../lib/sources.js";
 import type * as lib_validation from "../lib/validation.js";
 import type * as projects from "../projects.js";
+import type * as proposals from "../proposals.js";
 import type * as receipts from "../receipts.js";
 import type * as runs from "../runs.js";
 import type * as snapshots from "../snapshots.js";
@@ -55,6 +56,7 @@ declare const fullApi: ApiFromModules<{
   "lib/sources": typeof lib_sources;
   "lib/validation": typeof lib_validation;
   projects: typeof projects;
+  proposals: typeof proposals;
   receipts: typeof receipts;
   runs: typeof runs;
   snapshots: typeof snapshots;
