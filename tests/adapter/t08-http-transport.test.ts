@@ -12,6 +12,7 @@ import {
 	OPERATIONS,
 	UNIMPLEMENTED_OPERATIONS,
 } from "../../generated/operations";
+import type { Investigation } from "../../generated/types";
 import * as validators from "../../generated/validators.js";
 import {
 	handleMcp,
@@ -26,6 +27,7 @@ let keys: Awaited<ReturnType<typeof generateKeyPair>>;
 let sequence = 0;
 let clientId: string;
 let issuer: string;
+let oauthIssuer: string;
 let keyFetch: ReturnType<typeof vi.fn>;
 
 beforeAll(async () => {
@@ -34,6 +36,8 @@ beforeAll(async () => {
 beforeEach(async () => {
 	clientId = `client_http${++sequence}`;
 	issuer = `https://api.workos.com/user_management/${clientId}`;
+	oauthIssuer = `https://http${sequence}.authkit.app`;
+	vi.stubEnv("MCP_AUTHORIZATION_SERVER", oauthIssuer);
 	vi.stubEnv("THINK_WIDE_MODE", "connected");
 	vi.stubEnv("CONVEX_SELF_HOSTED_URL", "https://convex.example");
 	vi.stubEnv("MCP_RESOURCE_URL", resource);
@@ -45,7 +49,10 @@ beforeEach(async () => {
 		use: "sig",
 	};
 	keyFetch = vi.fn(async (url: string | URL | Request) => {
-		expect(String(url)).toBe(`https://api.workos.com/sso/jwks/${clientId}`);
+		expect([
+			`https://api.workos.com/sso/jwks/${clientId}`,
+			`${oauthIssuer}/oauth2/jwks`,
+		]).toContain(String(url));
 		return Response.json({ keys: [jwk] });
 	});
 	vi.stubGlobal("fetch", keyFetch);
@@ -56,10 +63,17 @@ afterEach(() => {
 	vi.unstubAllEnvs();
 });
 
-async function jwt(subject = "A", claims: Record<string, unknown> = {}) {
-	return new SignJWT({ client_id: clientId, ...claims })
+async function jwt(
+	subject = "A",
+	claims: Record<string, unknown> = {},
+	profile: "session" | "mcp" = "session",
+) {
+	return new SignJWT({
+		...(profile === "session" ? { client_id: clientId } : { aud: resource }),
+		...claims,
+	})
 		.setProtectedHeader({ alg: "RS256", kid: "test-key" })
-		.setIssuer(issuer)
+		.setIssuer(profile === "session" ? issuer : oauthIssuer)
 		.setSubject(subject)
 		.setIssuedAt()
 		.setExpirationTime("5m")
@@ -87,6 +101,8 @@ async function fixture() {
 	const t = convexTest(schema, modules);
 	const a = await jwt("A");
 	const b = await jwt("B");
+	const mcpA = await jwt("A", {}, "mcp");
+	const mcpB = await jwt("B", {}, "mcp");
 	const tokens = new WeakMap<ConvexHttpClient, string>();
 	vi.spyOn(ConvexHttpClient.prototype, "setAuth").mockImplementation(function (
 		this: ConvexHttpClient,
@@ -96,13 +112,14 @@ async function fixture() {
 	});
 	const caller = (client: ConvexHttpClient) => {
 		const token = tokens.get(client);
-		if (token !== a && token !== b)
+		if (token !== a && token !== b && token !== mcpA && token !== mcpB)
 			throw new Error("Unexpected forwarded token");
-		const subject = token === a ? "A" : "B";
+		const subject = token === a || token === mcpA ? "A" : "B";
+		const tokenIssuer = token === a || token === b ? issuer : oauthIssuer;
 		return t.withIdentity({
-			issuer,
+			issuer: tokenIssuer,
 			subject,
-			tokenIdentifier: `${issuer}|${subject}`,
+			tokenIdentifier: `${tokenIssuer}|${subject}`,
 		});
 	};
 	// Only the Convex network leg is substituted. JWT signature verification and
@@ -121,14 +138,15 @@ async function fixture() {
 		return caller(this).mutation(ref as FunctionReference<"mutation">, args);
 	});
 	await t.run(async (ctx) => {
-		for (const subject of ["A", "B"])
-			await ctx.db.insert("grants", {
-				principal: `${issuer}|${subject}`,
-				resourceKind: "snapshot",
-				resourceId: "shared_snapshot",
-				role: "reader",
-				epoch: 1,
-			});
+		for (const tokenIssuer of [issuer, oauthIssuer])
+			for (const subject of ["A", "B"])
+				await ctx.db.insert("grants", {
+					principal: `${tokenIssuer}|${subject}`,
+					resourceKind: "snapshot",
+					resourceId: "shared_snapshot",
+					role: "reader",
+					epoch: 1,
+				});
 	});
 	const http = async (operation: string, body: unknown, token = a) =>
 		handleOperation(
@@ -149,12 +167,12 @@ async function fixture() {
 		await client.connect(transport);
 		return client;
 	};
-	return { t, a, b, http, mcp };
+	return { t, a, b, mcpA, mcpB, http, mcp };
 }
 
 test("SDK Streamable HTTP initializes, lists generated inventory, excludes HTTP-only and unimplemented tools", async () => {
 	const f = await fixture();
-	const client = await f.mcp(f.a);
+	const client = await f.mcp(f.mcpA);
 	try {
 		expect((await client.listTools()).tools.map((tool) => tool.name)).toEqual(
 			MCP_TOOL_NAMES,
@@ -180,73 +198,79 @@ test("SDK Streamable HTTP initializes, lists generated inventory, excludes HTTP-
 	}
 });
 
-test("HTTP and MCP preserve decisions, receipts, foreign-id indistinguishability and revocation", async () => {
+test.each([
+	"http",
+	"mcp",
+])("%s preserves decisions, receipts, isolation and revocation", async (surface) => {
 	const f = await fixture();
-	const client = await f.mcp(f.a);
-	const other = await f.mcp(f.b);
+	const client = await f.mcp(f.mcpA);
+	const other = await f.mcp(f.mcpB);
+	const call = async (
+		name: string,
+		args: Record<string, unknown>,
+		foreign = false,
+	) =>
+		surface === "http"
+			? (await f.http(name, args, foreign ? f.b : f.a)).json()
+			: (await (foreign ? other : client).callTool({ name, arguments: args }))
+					.structuredContent;
 	try {
 		const open = {
 			snapshotIds: ["shared_snapshot"],
 			question: "Keep exact evidence",
 			requestKey: "http-open-0001",
 		};
-		const created = await (await f.http("openInvestigation", open)).json();
+		const created = await call("openInvestigation", open);
+		expect(validators.Investigation(created)).toBe(true);
+		const { investigationId } = created as Investigation;
+		expect(await call("openInvestigation", open)).toEqual(created);
 		expect(
-			(await client.callTool({ name: "openInvestigation", arguments: open }))
-				.structuredContent,
-		).toEqual(created);
-		expect(
-			await (
-				await f.http("openInvestigation", { ...open, question: "Changed" })
-			).json(),
+			await call("openInvestigation", { ...open, question: "Changed" }),
 		).toMatchObject({ code: "request_key_conflict" });
 		const decision = {
-			investigationId: created.investigationId,
+			investigationId: investigationId,
 			expectedRevision: 0,
 			kind: "correction",
 			statement: "Preserve human decision",
 			requestKey: "http-decision-0001",
 		};
-		const saved = (
-			await client.callTool({ name: "recordDecision", arguments: decision })
-		).structuredContent;
-		expect(await (await f.http("recordDecision", decision)).json()).toEqual(
-			saved,
-		);
+		const saved = await call("recordDecision", decision);
+		expect(await call("recordDecision", decision)).toEqual(saved);
 		expect(
-			await (
-				await f.http("readInvestigation", {
-					investigationId: created.investigationId,
-				})
-			).json(),
+			await call("readInvestigation", {
+				investigationId: investigationId,
+			}),
 		).toMatchObject({ revision: 1, decisions: [saved] });
-		const foreign = await f.http(
+		const foreign = await call(
 			"readInvestigation",
-			{ investigationId: created.investigationId },
-			f.b,
+			{ investigationId: investigationId },
+			true,
 		);
-		const missing = await f.http(
-			"readInvestigation",
-			{ investigationId: "missing" },
-			f.b,
+		expect(JSON.stringify(foreign)).toBe(
+			JSON.stringify(
+				await call("readInvestigation", { investigationId: "missing" }, true),
+			),
 		);
-		expect(foreign.status).toBe(404);
-		expect(await foreign.text()).toBe(await missing.text());
+		expect(await call("recordDecision", decision, true)).toEqual({
+			code: "not_found",
+			message: "Resource not found",
+		});
+		await f.t.run(async (ctx) => {
+			for (const grant of await ctx.db.query("grants").collect())
+				if (
+					grant.principal ===
+						`${surface === "http" ? issuer : oauthIssuer}|A` &&
+					grant.resourceKind === "snapshot"
+				)
+					await ctx.db.patch(grant._id, { revokedAt: Date.now() });
+		});
+		expect(await call("openInvestigation", open)).toMatchObject({
+			code: "not_found",
+		});
 		expect(
-			(await other.callTool({ name: "recordDecision", arguments: decision }))
-				.structuredContent,
-		).toEqual({ code: "not_found", message: "Resource not found" });
-		await tRevoke(f.t);
-		expect(
-			(await client.callTool({ name: "openInvestigation", arguments: open }))
-				.structuredContent,
-		).toMatchObject({ code: "not_found" });
-		expect(
-			await (
-				await f.http("readInvestigation", {
-					investigationId: created.investigationId,
-				})
-			).json(),
+			await call("readInvestigation", {
+				investigationId: investigationId,
+			}),
 		).toMatchObject({ code: "not_found" });
 		expect(
 			await f.t.run(
@@ -258,39 +282,70 @@ test("HTTP and MCP preserve decisions, receipts, foreign-id indistinguishability
 		await other.close();
 	}
 });
-async function tRevoke(t: Awaited<ReturnType<typeof fixture>>["t"]) {
-	await t.run(async (ctx) => {
-		for (const grant of await ctx.db.query("grants").collect())
-			if (
-				grant.principal === `${issuer}|A` &&
-				grant.resourceKind === "snapshot"
-			)
-				await ctx.db.patch(grant._id, { revokedAt: Date.now() });
-	});
-}
 
-test.each([
-	"missing",
-	"garbage",
-	"expired",
-	"wrong issuer",
-	"wrong signature",
-	"none",
-	"wrong audience",
-	"wrong client",
-	"no exp",
-])("rejects %s with 401 and discovery challenge before any handler", async (kind) => {
+test("same subject under browser and OAuth issuers is not implicitly the same principal", async () => {
+	const f = await fixture();
+	const client = await f.mcp(f.mcpA);
+	try {
+		const open = {
+			snapshotIds: ["shared_snapshot"],
+			question: "No implicit identity linking",
+			requestKey: "split-profile-0001",
+		};
+		const browser = await (await f.http("openInvestigation", open)).json();
+		expect(
+			(
+				await client.callTool({
+					name: "readInvestigation",
+					arguments: { investigationId: browser.investigationId },
+				})
+			).structuredContent,
+		).toMatchObject({ code: "not_found" });
+		const oauth = (
+			await client.callTool({ name: "openInvestigation", arguments: open })
+		).structuredContent;
+		expect(oauth).not.toEqual(browser);
+		expect((await f.http("listProjects", {}, f.mcpA)).status).toBe(401);
+		expect((await handleMcp(request(f.a))).status).toBe(401);
+	} finally {
+		await client.close();
+	}
+});
+
+const invalidProfiles = (["session", "mcp"] as const).flatMap((profile) =>
+	[
+		"missing",
+		"garbage",
+		"expired",
+		"wrong issuer",
+		"wrong signature",
+		"none",
+		"wrong audience",
+		"no exp",
+		...(profile === "session" ? ["wrong client"] : []),
+	].map((kind) => ({ profile, kind })),
+);
+test.each(
+	invalidProfiles,
+)("$profile rejects $kind with 401 and discovery challenge", async ({
+	profile,
+	kind,
+}) => {
 	let token: string | undefined;
+	const expectedIssuer = profile === "session" ? issuer : oauthIssuer;
 	if (kind === "garbage") token = "garbage";
 	else if (kind === "none")
-		token = `${Buffer.from(JSON.stringify({ alg: "none" })).toString("base64url")}.${Buffer.from(JSON.stringify({ iss: issuer, sub: "A" })).toString("base64url")}.`;
+		token = `${Buffer.from(JSON.stringify({ alg: "none" })).toString("base64url")}.${Buffer.from(JSON.stringify({ iss: expectedIssuer, sub: "A", aud: resource })).toString("base64url")}.`;
 	else if (kind !== "missing") {
 		const signer = new SignJWT({
+			...(profile === "mcp" ? { aud: resource } : {}),
 			...(kind === "wrong audience" ? { aud: "https://evil.example" } : {}),
 			...(kind === "wrong client" ? { client_id: "client_wrong" } : {}),
 		})
 			.setProtectedHeader({ alg: "RS256", kid: "test-key" })
-			.setIssuer(kind === "wrong issuer" ? "https://evil.example" : issuer)
+			.setIssuer(
+				kind === "wrong issuer" ? "https://evil.example" : expectedIssuer,
+			)
 			.setSubject("A")
 			.setIssuedAt();
 		if (kind !== "no exp")
@@ -303,23 +358,23 @@ test.each([
 				: keys.privateKey,
 		);
 	}
-	for (const handle of [
-		(r: Request) => handleMcp(r),
-		(r: Request) => handleOperation(r, "listProjects"),
-	]) {
-		const response = await handle(request(token));
-		expect(response.status).toBe(401);
-		expect(response.headers.get("WWW-Authenticate")).toBe(
-			'Bearer resource_metadata="https://think-wide.example/.well-known/oauth-protected-resource"',
-		);
-		expect(await response.json()).toEqual({
-			code: "unauthenticated",
-			message: "Authentication required",
-		});
-	}
+	const response =
+		profile === "mcp"
+			? await handleMcp(request(token))
+			: await handleOperation(request(token), "listProjects");
+	expect(response.status).toBe(401);
+	expect(response.headers.get("WWW-Authenticate")).toBe(
+		profile === "mcp"
+			? 'Bearer resource_metadata="https://think-wide.example/.well-known/oauth-protected-resource"'
+			: 'Bearer realm="think-wide-browser-api"',
+	);
+	expect(await response.json()).toEqual({
+		code: "unauthenticated",
+		message: "Authentication required",
+	});
 });
 
-test("metadata is configured, ignores forwarded hosts, and claims no unproven OAuth server", () => {
+test("metadata advertises only the configured OAuth issuer and ignores forwarded hosts", () => {
 	const response = protectedResourceMetadata(
 		new Request(
 			"https://think-wide.example/.well-known/oauth-protected-resource",
@@ -329,6 +384,7 @@ test("metadata is configured, ignores forwarded hosts, and claims no unproven OA
 	expect(response.status).toBe(200);
 	return expect(response.json()).resolves.toEqual({
 		resource,
+		authorization_servers: [oauthIssuer],
 		bearer_methods_supported: ["header"],
 	});
 });
@@ -377,7 +433,7 @@ test.each([
 	"token",
 ])("rejects smuggled %s through both adapters", async (field) => {
 	const f = await fixture();
-	const client = await f.mcp(f.a);
+	const client = await f.mcp(f.mcpA);
 	try {
 		for (const [name, args] of [
 			[
@@ -427,7 +483,7 @@ test.each([
 });
 
 test("rejects malformed, oversized, deep and batch bodies and unsupported methods", async () => {
-	const token = await jwt();
+	const token = await jwt("A", {}, "mcp");
 	let deep: object = {};
 	for (let i = 0; i < 40; i++) deep = { child: deep };
 	for (const body of [
@@ -470,4 +526,37 @@ test("private HTTP behind TLS proxy uses configured authority and HTTPS discover
 	expect(response.headers.get("WWW-Authenticate")).toContain(
 		"https://think-wide.example/.well-known/oauth-protected-resource",
 	);
+});
+
+test.each([
+	"absent",
+	"wrong",
+	"client-id",
+])("MCP rejects %s audience from its otherwise valid OAuth issuer", async (kind) => {
+	const claims =
+		kind === "absent"
+			? {}
+			: { aud: kind === "wrong" ? "https://other.example/api/mcp" : clientId };
+	const token = await new SignJWT(claims)
+		.setProtectedHeader({ alg: "RS256", kid: "test-key" })
+		.setIssuer(oauthIssuer)
+		.setSubject("A")
+		.setIssuedAt()
+		.setExpirationTime("5m")
+		.sign(keys.privateKey);
+	expect((await handleMcp(request(token))).status).toBe(401);
+});
+
+test("MCP fails closed when OAuth issuer is unconfigured; browser profile still works", async () => {
+	const f = await fixture();
+	vi.stubEnv("MCP_AUTHORIZATION_SERVER", "");
+	expect((await handleMcp(request(f.a))).status).toBe(503);
+	expect(
+		protectedResourceMetadata(
+			new Request(
+				"https://think-wide.example/.well-known/oauth-protected-resource",
+			),
+		).status,
+	).toBe(503);
+	expect((await f.http("listProjects", {})).status).toBe(200);
 });

@@ -4,7 +4,12 @@ import { canonicalArguments } from "../../core/receipts";
 import { OPERATIONS } from "../../generated/operations";
 import type { OperationError } from "../../generated/types";
 import { OperationError as isOperationError } from "../../generated/validators.js";
-import { verifyToken, workosIssuer } from "./auth/verify-token";
+import {
+	mcpIssuer,
+	verifyMcpToken,
+	verifySessionToken,
+	workosIssuer,
+} from "./auth/verify-token";
 import { serverConfig } from "./config";
 import { createMcpServer } from "./mcp/server";
 import { dispatch } from "./ops/dispatch";
@@ -36,7 +41,7 @@ function resourceConfig() {
 	) {
 		throw new Error("MCP_RESOURCE_URL must be HTTPS");
 	}
-	return { resource, ...workosIssuer() };
+	return { resource };
 }
 
 function checkOrigin(request: Request, resource: URL) {
@@ -52,8 +57,7 @@ function checkOrigin(request: Request, resource: URL) {
 	);
 }
 
-/** Discovery describes the protected resource. WorkOS AuthKit session-token
- * acceptance does not establish third-party OAuth registration/discovery. */
+/** Advertise only the explicitly configured OAuth authorization server. */
 export function protectedResourceMetadata(request: Request): Response {
 	try {
 		const { resource } = resourceConfig();
@@ -61,7 +65,11 @@ export function protectedResourceMetadata(request: Request): Response {
 			return errorResponse("not_found", "Resource not found", 403);
 		}
 		return Response.json(
-			{ resource: resource.href, bearer_methods_supported: ["header"] },
+			{
+				resource: resource.href,
+				authorization_servers: [mcpIssuer()],
+				bearer_methods_supported: ["header"],
+			},
 			{ headers: noStore },
 		);
 	} catch {
@@ -73,15 +81,26 @@ export function protectedResourceMetadata(request: Request): Response {
 	}
 }
 
-function challenge(resource: URL) {
+function challenge(resource: URL, profile: "session" | "mcp") {
+	if (profile === "session") {
+		return { "WWW-Authenticate": 'Bearer realm="think-wide-browser-api"' };
+	}
 	const metadata = new URL("/.well-known/oauth-protected-resource", resource);
 	return { "WWW-Authenticate": `Bearer resource_metadata="${metadata.href}"` };
 }
 
-async function authenticate(request: Request): Promise<string | Response> {
+async function authenticate(
+	request: Request,
+	profile: "session" | "mcp",
+): Promise<string | Response> {
 	let resource: URL;
 	try {
 		({ resource } = resourceConfig());
+		if (profile === "mcp") {
+			mcpIssuer();
+		} else {
+			workosIssuer();
+		}
 	} catch {
 		return errorResponse(
 			"capability_disabled",
@@ -93,13 +112,15 @@ async function authenticate(request: Request): Promise<string | Response> {
 		return errorResponse("not_found", "Resource not found", 403);
 	}
 	try {
-		return await verifyToken(request, resource.href);
+		return profile === "mcp"
+			? await verifyMcpToken(request, resource.href)
+			: await verifySessionToken(request, resource.href);
 	} catch {
 		return errorResponse(
 			"unauthenticated",
 			"Authentication required",
 			401,
-			challenge(resource),
+			challenge(resource, profile),
 		);
 	}
 }
@@ -165,7 +186,7 @@ export async function handleOperation(
 	request: Request,
 	operationId: string,
 ): Promise<Response> {
-	const token = await authenticate(request);
+	const token = await authenticate(request, "session");
 	if (token instanceof Response) {
 		return token;
 	}
@@ -210,13 +231,15 @@ export async function handleOperation(
 		status,
 		headers: {
 			...noStore,
-			...(status === 401 ? challenge(resourceConfig().resource) : {}),
+			...(status === 401
+				? challenge(resourceConfig().resource, "session")
+				: {}),
 		},
 	});
 }
 
 export async function handleMcp(request: Request): Promise<Response> {
-	const token = await authenticate(request);
+	const token = await authenticate(request, "mcp");
 	if (token instanceof Response) {
 		return token;
 	}

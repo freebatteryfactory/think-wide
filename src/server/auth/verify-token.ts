@@ -15,21 +15,14 @@ export function workosIssuer() {
 	};
 }
 
-/** Verify the existing AuthKit session profile. Its client-specific issuer and
+/** Verify the existing AuthKit browser session profile. Its client-specific issuer and
  * JWKS bind the application; observed WorkOS session JWTs have no aud claim.
  * This is not yet resource-audience-bound OAuth for third-party MCP hosts. */
-export async function verifyToken(
+export async function verifySessionToken(
 	request: Request,
 	resource: string,
 ): Promise<string> {
-	const authorization = request.headers.get("authorization");
-	const match = authorization?.match(
-		/^Bearer ([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)$/i,
-	);
-	if (!match || match[1].length > 16384) {
-		throw new Error("Authentication required");
-	}
-	const token = match[1];
+	const token = bearerToken(request);
 	const { clientId, issuer } = workosIssuer();
 	if (cached?.clientId !== clientId) {
 		cached = {
@@ -57,6 +50,67 @@ export async function verifyToken(
 			resource,
 		)
 	) {
+		throw new Error("Authentication required");
+	}
+	return token;
+}
+
+function bearerToken(request: Request): string {
+	const match = request.headers
+		.get("authorization")
+		?.match(/^Bearer ([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)$/i);
+	if (!match || match[1].length > 16384) {
+		throw new Error("Authentication required");
+	}
+	return match[1];
+}
+
+/** No default issuer: operator configuration follows a verified OAuth flow. */
+export function mcpIssuer(): string {
+	const configured = process.env.MCP_AUTHORIZATION_SERVER;
+	if (!configured) {
+		throw new Error("MCP OAuth is not configured");
+	}
+	const url = new URL(configured);
+	if (
+		url.protocol !== "https:" ||
+		url.username ||
+		url.password ||
+		url.search ||
+		url.hash ||
+		url.pathname !== "/" ||
+		configured !== url.origin
+	) {
+		throw new Error("MCP authorization server must be an HTTPS origin");
+	}
+	return url.origin;
+}
+
+let mcpCached:
+	| { issuer: string; keys: ReturnType<typeof createRemoteJWKSet> }
+	| undefined;
+
+/** OAuth access tokens are a different profile from AuthKit browser sessions.
+ * Preserve the original token and issuer: downstream Convex verifies it again. */
+export async function verifyMcpToken(
+	request: Request,
+	resource: string,
+): Promise<string> {
+	const token = bearerToken(request);
+	const issuer = mcpIssuer();
+	if (mcpCached?.issuer !== issuer) {
+		mcpCached = {
+			issuer,
+			keys: createRemoteJWKSet(new URL("/oauth2/jwks", issuer)),
+		};
+	}
+	const { payload } = await jwtVerify(token, mcpCached.keys, {
+		issuer,
+		audience: resource,
+		algorithms: ["RS256"],
+		requiredClaims: ["iss", "sub", "iat", "exp", "aud"],
+	});
+	if (!payload.sub) {
 		throw new Error("Authentication required");
 	}
 	return token;
