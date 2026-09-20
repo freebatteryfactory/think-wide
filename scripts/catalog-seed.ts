@@ -23,15 +23,23 @@ const root = fileURLToPath(new URL("../", import.meta.url));
 async function main() {
 	const { values, positionals } = parseArgs({
 		options: {
-			"env-file": { type: "string", default: ".env.local" },
+			"env-file": { type: "string" },
 			owner: { type: "string" },
 		},
 		allowPositionals: true,
 	});
-	if (!values.owner || !positionals.length || positionals.length > 8)
-		throw new Error(
-			"Usage: catalog:seed --owner 'https://issuer|subject' [--env-file .env.local] PUBLIC_HTTPS_URL[@FULL_COMMIT] ... (1–8 URLs)",
+	if (
+		!values["env-file"] ||
+		!values.owner ||
+		!positionals.length ||
+		positionals.length > 8
+	) {
+		console.error(
+			"Usage: catalog:seed requires --env-file PATH, --owner 'https://issuer|subject' and 1–8 PUBLIC_HTTPS_URL[@FULL_COMMIT] selections",
 		);
+		process.exitCode = 1;
+		return;
+	}
 	const selections = positionals.map(catalogSelection);
 	const envFile = resolve(values["env-file"]);
 	const config = parseEnv(await readFile(envFile, "utf8"));

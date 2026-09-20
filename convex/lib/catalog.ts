@@ -83,7 +83,7 @@ export async function readCatalogClaim(
 	const claim = id && (await ctx.db.get(id));
 	if (!claim || claim.principal !== authorized.principal.id)
 		return fail("not_found", "Resource not found");
-	const projects: Project[] = [];
+	const projects = new Map<string, Project>();
 	for (const item of claim.snapshots) {
 		const snapshot = await authorized.loadAuthorized(
 			"snapshot",
@@ -94,14 +94,27 @@ export async function readCatalogClaim(
 		const project = decode<Project>(validators.Project, snapshot.project);
 		if (project.dataLabel !== "public")
 			return fail("not_found", "Resource not found");
-		projects.push(project);
+		const existing = projects.get(project.repositoryId);
+		projects.set(
+			project.repositoryId,
+			validate<Project>(
+				validators.Project,
+				existing
+					? {
+							...existing,
+							snapshots: [...existing.snapshots, ...project.snapshots],
+						}
+					: project,
+				true,
+			),
+		);
 	}
 	return validate<ResultEnvelope>(
 		validators.ResultEnvelope,
 		{
 			kind: "projects",
 			scope: { snapshotIds: claim.snapshots.map((item) => item.snapshotId) },
-			entries: projects,
+			entries: [...projects.values()],
 			coverage: { status: "not_indexed" },
 			nextCursor: null,
 			truncated: { is: false },

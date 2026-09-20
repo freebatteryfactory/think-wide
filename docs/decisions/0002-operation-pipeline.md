@@ -98,7 +98,9 @@ user auth contexts are rejected by the existing provisioning boundary.
 A verified caller may run `claimDemoAccess` without supplying any source or
 principal identifier. In one transaction it creates missing **reader** snapshot
 grants for current catalog members. Existing manual grants are preserved exactly;
-no claim upgrades a role. Each new catalog grant carries the publication epoch in
+no claim upgrades a role. When both are valid, access selects a manual grant
+before a catalog grant, and admission fences that exact selected grant ID/epoch.
+Each new catalog grant carries the publication epoch in
 addition to its normal grant epoch. Every read/access and late publication checks
 that catalog membership and epoch remain current. Withdrawal or removal/re-add
 invalidates prior catalog grants; manual grants retain their explicit authority.
@@ -120,4 +122,7 @@ work pins that exact commit. Optional `URL@FULL_COMMIT` makes reruns reproducibl
 It uses the existing bounded Git reader without checkout or target execution,
 completes bounded source/history caches, and advertises membership last. This is
 an administrative CLI with an explicit CLI environment file and owner recipient;
-no admin key enters app code. It is not the future public import path B.
+no admin key enters app code. An internal-only operator query retrieves the
+original indexing timestamp for exact immutable registration replay; it applies
+the same recipient and manual-owner checks. It is not the future public import
+path B.

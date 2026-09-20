@@ -352,6 +352,135 @@ describe("public demo catalog and private human work", () => {
 		);
 	});
 
+	test("catalog response groups snapshots from the same repository like listProjects", async () => {
+		const { t, a } = await fixture();
+		const project: Project = {
+			repositoryId: "repo1",
+			displayName: "Public 1",
+			provider: "local-git",
+			dataLabel: "public",
+			syncStatus: "ready",
+			snapshots: [
+				{
+					snapshotId: "snapshot5",
+					commit: "d".repeat(40),
+					rootTreeId: "e".repeat(40),
+					hashAlgorithm: "sha1",
+					indexedAt: 2,
+					coverage: "not_indexed",
+				},
+			],
+		};
+		await t.mutation(internal.operatorProvisioning.registerSnapshot, {
+			ownerTokenIdentifier,
+			input: { project, entries: [] },
+		});
+		await t.mutation(internal.operatorProvisioning.setDemoCatalog, {
+			ownerTokenIdentifier,
+			input: { snapshotId: "snapshot5", enabled: true },
+		});
+		const claimed = await a.mutation(api.catalog.claimDemoAccess, claim);
+		const listed = await a.query(api.projects.listProjects, { request: {} });
+		expect(claimed.entries).toEqual(listed.entries);
+		expect(claimed.entries).toHaveLength(3);
+		expect(claimed.scope.snapshotIds).toHaveLength(4);
+		expect(claimed.entries[0]).toMatchObject({
+			repositoryId: "repo1",
+			snapshots: [{ snapshotId: "snapshot1" }, { snapshotId: "snapshot5" }],
+		});
+	});
+
+	test.each([
+		"catalog withdrawal",
+		"manual epoch",
+		"manual revocation",
+	])("manual authority is preferred and %s preserves exact admission fencing", async (mode) => {
+		const { t, a } = await fixture();
+		await a.mutation(api.catalog.claimDemoAccess, claim);
+		const manualId = await t.run(async (ctx) => {
+			await ctx.db.insert("entries", {
+				snapshotId: "snapshot1",
+				entryId: "entry1",
+				parentEntryId: null,
+				body: JSON.stringify({
+					snapshotId: "snapshot1",
+					entryId: "entry1",
+					parentEntryId: null,
+					name: "source.ts",
+					kind: "blob",
+					objectId: "b".repeat(40),
+					size: 1,
+				}),
+			});
+			return ctx.db.insert("grants", {
+				principal: identity("a").tokenIdentifier,
+				resourceKind: "snapshot",
+				resourceId: "snapshot1",
+				role: "owner",
+				epoch: 1,
+			});
+		});
+		const investigation = await a.mutation(
+			api.investigations.openInvestigation,
+			{ request: open },
+		);
+		const run = await a.mutation(api.runs.admitRun, {
+			request: {
+				investigationId: investigation.investigationId,
+				expectedRevision: 0,
+				purpose: "compare",
+				requestKey: "manual-fence-run",
+			},
+		});
+		const stored = await t.run(async (ctx) => {
+			const id = ctx.db.normalizeId("runs", run.runId);
+			return id ? ctx.db.get(id) : null;
+		});
+		expect(stored?.fences).toContainEqual({ grantId: manualId, epoch: 1 });
+		if (mode === "catalog withdrawal")
+			await t.mutation(internal.operatorProvisioning.setDemoCatalog, {
+				ownerTokenIdentifier,
+				input: { snapshotId: "snapshot1", enabled: false },
+			});
+		else
+			await t.run((ctx) =>
+				ctx.db.patch(
+					manualId,
+					mode === "manual epoch" ? { epoch: 2 } : { revokedAt: Date.now() },
+				),
+			);
+		const result = await t.mutation(internal.runs.publish, {
+			request: {
+				investigationId: investigation.investigationId,
+				baseRevision: 0,
+				runId: run.runId,
+				claims: [
+					{
+						statement: "Synthetic indexed fixture; not verified source",
+						evidenceClass: "model_hypothesis",
+						refs: [
+							{
+								repositoryId: "repo1",
+								snapshotId: "snapshot1",
+								entryId: "entry1",
+								commit: "a".repeat(40),
+								blobId: "b".repeat(40),
+								hashAlgorithm: "sha1",
+								byteRange: { start: 0, end: 1 },
+								digest: "c".repeat(64),
+							},
+						],
+					},
+				],
+			},
+		});
+		expect(result).toEqual(
+			mode === "catalog withdrawal"
+				? { published: true, status: "published" }
+				: { published: false, status: "superseded" },
+		);
+	});
+
 	test("unauthenticated and smuggled identities are rejected without grants", async () => {
 		const { t, a } = await fixture();
 		await expect(
