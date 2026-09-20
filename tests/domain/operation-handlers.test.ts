@@ -1,6 +1,15 @@
 // The registry's handler bindings name real Convex registrations. Plain Node: the Convex
 // modules are parsed with the TypeScript compiler API, never executed.
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import ts from "typescript";
 import { describe, expect, test } from "vitest";
@@ -63,6 +72,21 @@ const moduleRegistrations = (module: string) => {
 	return registrations(path, readFileSync(path, "utf8"));
 };
 
+function publicModules(directory: string, prefix = ""): string[] {
+	return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+		if (entry.isDirectory()) {
+			if (entry.name === "_generated" || entry.name === "lib") return [];
+			return publicModules(
+				join(directory, entry.name),
+				`${prefix}${entry.name}/`,
+			);
+		}
+		return entry.isFile() && entry.name.endsWith(".ts")
+			? [`${prefix}${entry.name.slice(0, -3)}`]
+			: [];
+	});
+}
+
 const bound = OPERATIONS.flatMap((o) =>
 	"handler" in o ? [{ ...o, handler: o.handler as string }] : [],
 );
@@ -83,6 +107,30 @@ describe("registry handler bindings", () => {
 			{ exportName: "a", form: "query", operationId: "getRun" },
 			{ exportName: "b", form: "mutation", operationId: "cancelRun" },
 		]);
+	});
+
+	test("coverage scan retains nested modules and excludes private implementation directories", () => {
+		const root = mkdtempSync(join(tmpdir(), "think-wide-handlers-"));
+		try {
+			for (const directory of ["nested/deeper", "_generated", "lib"])
+				mkdirSync(join(root, directory), { recursive: true });
+			for (const file of [
+				"top.ts",
+				"nested/deeper/public.ts",
+				"_generated/api.ts",
+				"lib/private.ts",
+			])
+				writeFileSync(
+					join(root, file),
+					'export const probe = operation.query("getRun", h);',
+				);
+			expect(publicModules(root).sort()).toEqual([
+				"nested/deeper/public",
+				"top",
+			]);
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
 	});
 
 	test("handler map is derived from every bound registry operation", () => {
@@ -117,14 +165,9 @@ describe("registry handler bindings", () => {
 
 	test("every public registration in convex/ is bound by exactly one operation", () => {
 		const declared = new Set(bound.map((o) => o.handler));
-		const actual = readdirSync(convexDir, { withFileTypes: true })
-			.filter((e) => e.isFile() && e.name.endsWith(".ts"))
-			.flatMap((e) => {
-				const module = e.name.slice(0, -3);
-				return moduleRegistrations(module).map(
-					(r) => `${module}:${r.exportName}`,
-				);
-			});
+		const actual = publicModules(convexDir).flatMap((module) =>
+			moduleRegistrations(module).map((r) => `${module}:${r.exportName}`),
+		);
 		expect(actual.sort()).toEqual([...declared].sort());
 	});
 

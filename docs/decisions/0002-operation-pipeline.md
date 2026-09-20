@@ -38,3 +38,51 @@ Handlers never touch protected tables through raw `ctx.db`. They use `loadAuthor
 
 ## Acceptance it must satisfy
 Q01, Q03, Q06, Q07, Q14 in 05_SECURITY_AND_CI.md. An adversarial QA round follows implementation.
+
+## Operator provisioning exception (PR #29, issue #21)
+
+Accepted by the owner for local setup: an internal-only operator provisioning
+mutation may explicitly name the owning principal by its **full Convex
+`tokenIdentifier`**, preserving `issuer|subject` exactly. This is recipient data
+chosen by an administrator, equivalent in trust to a direct database write with
+the admin key. It is never a substitute for authenticating a public caller.
+A bare provider user ID is invalid. Recipient syntax is checked; existence in an
+identity provider is not inferred from a well-formed string. An administrator can
+intentionally provision another well-formed recipient, as part of this authority.
+
+`convex/operatorProvisioning.ts` exposes only internal mutations for registration,
+source-cache completion and history-cache completion. They reject a user auth
+context, never appear in `OPERATIONS` / `MCP_TOOLS`, and reuse T05's existing
+validation and storage helpers. Existing identity-based ingestion functions keep
+using `ctx.auth`; public operations and their policy pipeline are unchanged.
+Replays still require the recipient's current owner grant; revoked grants are
+never recreated and immutable registration metadata cannot be overwritten.
+
+`scripts/local-setup.ts` is a trusted operator CLI. It is non-production,
+local-demo and literal-loopback only. It accepts no owner/source arguments, verifies
+the local issuer's JWT, derives the recipient from those verified claims, and
+imports the committed synthetic alpha/beta bundles with the admin CLI. Normal
+MCP traffic uses user JWTs and never the admin key. Registration, blob caching
+and history caching are separate bounded transactions: interrupted setup is
+resumable, not an atomic import of the entire portfolio.
+
+The historical CLI `--identity` route could not reach internal functions on the
+pinned backend. This exception resolves the deliberate operator boundary rather
+than introducing a public upload of caller-asserted Git metadata.
+
+### Later public import path (B; not implemented by PR #29)
+
+The intended sequence is a public `requestImport` operation which stores the
+owner from verified identity and creates an import job; a trusted Node reader
+performs bounded Git work; trusted completion uses the shared registration
+primitive for that job's recorded owner. Completion must bind the job, source,
+recipient and current authorization before committing data.
+
+The worker should use a dedicated service identity accepted through a separate,
+reviewed JWT provider; the app server must never hold the admin key. A service JWT
+alone does **not** make an internal Convex function callable by an external client.
+That future ticket must implement an authenticated worker completion entry point
+which checks service authority and the job, then invokes the private primitive.
+Today's operator entry points remain administrative and reject ordinary user
+contexts. No new provider, import job, worker endpoint or public ingestion
+operation is delivered here. WorkOS Pipes/GitHub connectivity belongs to I02.
