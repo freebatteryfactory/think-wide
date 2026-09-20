@@ -17,7 +17,7 @@ I01 belongs to Andrew, T09 to Marc, local setup to the separate T08 branch.
 **Separate work:** T08 #21 seeds the local MCP demo. T07 #7 still needs a reviewed
 Node/Convex execution boundary; a literal operation special case in dispatch would
 violate the generated registry. `submitProposal` merits a separate T10 backend ticket:
-host admission semantics must be settled before implementation. Neither blocks private
+issue #28 now chooses explicit admission before reasoning, reusing existing run fences. Neither blocks private
 infrastructure preparation. Devpost materials remain with the coordinator.
 
 ## Topology and current limitations
@@ -32,10 +32,13 @@ Issue #26's newer comment recommends public TLS Convex for T09's reactive browse
 client. **Claude owns that website/topology decision.** Private preparation neither
 rewrites the browser nor authorizes exposing Convex. A public backend would need its
 own DNS/TLS route and the same I01 authenticated/foreign-principal acceptance gates.
-The image currently bakes `https://convex.invalid` into the obsolete scaffold provider
-to avoid a build-time missing-variable crash. It is a **private preparation artifact**,
-not a usable website. The website owner must replace this with the reviewed browser
-configuration and build a new verified image before activation.
+The public `VITE_CONVEX_URL` is a build argument, recorded in each release manifest.
+The intended browser origin is `https://convex.think-wide.fbf.systems`; its DNS/TLS
+and I01 identity remain activation gates. Runtime environment cannot change an
+inlined Vite origin: rebuild the image. Before PR #20 includes the provider fix
+(reported local commit `80bfbf7`), leaving this value unset causes page failures.
+After that fix, an unset origin should show an unconfigured-backend notice, not
+claim a functioning connected workbench. Neither behavior proves hosted identity.
 
 Native analyzer binaries/confinement are not supplied by this app image. T07 must
 provide a confined worker with scoped AppArmor allowance and prove it on this host.
@@ -79,7 +82,8 @@ use real user tokens. Never test user permissions with the admin key.
 
 ```sh
 # From a clean, committed checkout; performs the full repository gate itself.
-infra/production/build-release.sh /absolute/new/private/release-directory
+VITE_CONVEX_URL=https://convex.think-wide.fbf.systems \
+  infra/production/build-release.sh /absolute/new/private/release-directory
 # Transfer this directory over authenticated SSH, then on the VPS:
 python3 /opt/think-wide/infra/stage-release.py /absolute/upload-directory
 ```
@@ -109,7 +113,10 @@ python3 /opt/think-wide/infra/control.py bootstrap \
 Restore refuses existing roots/volumes, wrong image pins, missing original credentials,
 checksum changes and unsafe tar members. It never overwrites production. Restore
 projects **always** use an internal Docker network, so copied scheduled actions cannot
-reach external providers. Inspect through a separate SSH-forwarded loopback port.
+reach external providers. Docker 29 does not publish ports for this internal network. Inspect with the pinned
+Convex CLI in a temporary container attached only to the restore network, with its
+restored CLI credentials. Install CLI dependencies before attaching that container
+to the isolated network; never grant the restore backend outbound connectivity.
 Compare exported document IDs/content and deployment environment/schema with the
 pre-backup record before declaring recovery. Keep backup directories mode 0700 and
 files 0600; copy them off-host through SSH to protected storage. They contain secrets
@@ -139,3 +146,23 @@ no automated destructive rollback or cross-version SQLite downgrade in these scr
 - Remote MCP is another milestone: T08 HTTP transport plus real host OAuth and evidence.
 
 `getCapabilities` must continue describing measured integrations, never deployment intent.
+
+## Host firewall and analyzer preparation
+
+The VPS uses UFW 0.36.2 with default deny inbound and TCP 22/80/443 allowed for
+IPv4 and IPv6. Outbound traffic and established connections remain allowed. During
+initial activation a systemd timer armed `ufw disable` as a rollback; a fresh SSH
+connection and service checks succeeded before the timer was cancelled.
+
+Docker published ports bypass UFW's normal INPUT rules. Therefore the deployment
+configs must also enforce loopback-only backend/admin listeners and publish only
+80/443 on the gated public proxy. Do not treat UFW as protection for a container
+accidentally published on `0.0.0.0:3210`. Recheck Docker port mappings on every release.
+See [Docker firewall guidance](https://docs.docker.com/engine/network/packet-filtering-firewalls/)
+and [Ubuntu UFW guidance](https://ubuntu.com/server/docs/how-to/security/firewalls/).
+
+Bubblewrap 0.9.0-1ubuntu0.3 is installed on the host. The kernel's AppArmor user
+namespace restriction remains enabled. Installation alone does not establish the
+worker's isolation or enable structural search; T07 must prove the actual worker
+profile/runtime. Battle Intel units, listeners and Cloudflare tunnel config remain
+untouched.
