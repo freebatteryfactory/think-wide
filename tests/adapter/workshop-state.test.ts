@@ -105,4 +105,16 @@ describe("human input survives workshop view changes", () => {
 		expect(state.preview).toBeNull();
 		expect(state.notice).toContain("Write your decision");
 	});
+	it("clears decision feedback when its preview is dismissed", () => {
+		const previewed = workshopReducer(initialWorkshopState, {
+			type: "preview",
+			draft,
+		});
+		const dismissed = workshopReducer(previewed, {
+			type: "dismiss-preview",
+		});
+
+		expect(dismissed.preview).toBeNull();
+		expect(dismissed.notice).toBe("");
+	});
 });
