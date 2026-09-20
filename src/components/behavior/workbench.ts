@@ -20,6 +20,11 @@ export const decisionLabels = {
 	acceptance: "Acceptance",
 } satisfies Record<RecordDecisionRequest["kind"], string>;
 
+export const decisionCategoryLabels = {
+	architecture: "Architecture",
+	security: "Security",
+} satisfies Record<NonNullable<RecordDecisionRequest["category"]>, string>;
+
 export type DecisionDraft = Pick<
 	RecordDecisionRequest,
 	"kind" | "statement" | "category"
