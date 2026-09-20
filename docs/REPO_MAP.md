@@ -166,7 +166,7 @@ tests/render/theme-contrast.test.ts             EXISTS  T03  WCAG ratios for the
 tests/boundary/q10-injection.test.ts
 tests/boundary/q13-analyzer-confinement.test.ts
 tests/adapter/q14-same-policy-all-surfaces.test.ts
-tests/browser/smoke.test.ts             T03
+tests/browser/workshop.browser.test.ts  EXISTS  real Chromium via playwright-chromium; own config (vitest.browser.config.ts), `bun run test:browser`; skips loudly without a browser
 tests/e2e/q15-full-loop.test.ts         T11
 ```
 
