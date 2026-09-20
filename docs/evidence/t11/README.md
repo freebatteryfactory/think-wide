@@ -1,15 +1,62 @@
 # T11 preparation and capture handoff
 
 Status: **PARTIAL / public host-proposal and saved-brief integration**. Current integrated
-base: `76c193b` (T09, I04 and T10 merged), contract **0.4.0**. [T11 draft PR #27](https://github.com/freebatteryfactory/think-wide-hackathon/pull/27).
+base: `c14ced5` (T08 #29, T11 #32 and T10 #37 also merged), contract **0.4.0**. [T11 draft PR #27](https://github.com/freebatteryfactory/think-wide-hackathon/pull/27).
 Marc requested this continuation after T09 merged; the original 15:00 recording
 checkpoint was not met by this work. The seed names Andrew as T11 lead and Marc as
-capture partner. T10a #28 / PR #31 is now merged; its public operations are included here. No issued T11 issue was found. Confirm writing/capture roles with Andrew.
+capture partner. T10 PRs #31/#37 and Andrew's T11 PR #32 are merged; their tests are included here. No issued T11 issue was found. Confirm writing/capture roles with Andrew.
 
 This branch is `feat/t11-integration-prep` in `/private/tmp/think-wide-t11`; only new
 integration tests and evidence are authored here. T09 and T10 were merged into this branch.
-The user's root checkout is now another session's `t10-reasoning` branch; it was not
-switched or edited. The local main reference was advanced to `76c193b`.
+The user's root checkout is already `main` at `c14ced5`. Its untracked files, including
+another session's `tests/adapter/t10-live.ts`, were preserved; that script was not run.
+
+## Completion decision at c14ced5
+
+Use **local stdio MCP + synthetic alpha/beta + an actual external model host** for
+T11's first complete recording. The merged implementation supports that path;
+waiting for WorkOS or deployment is unnecessary for this explicitly local result.
+Authenticated browser acceptance remains a separate open requirement if the chosen
+recording surface is changed to the browser. A workshop pass is not backend acceptance.
+
+Remaining steps, in order:
+
+1. **Review the evidence-integrity concern with Eassa/Andrew.** Andrew's merged
+   `docs/evidence/T11.md` records that public submitProposal accepts an indexed ref
+   with a fabricated digest. Code inspection confirms indexed-ref authorization
+   does not hash its bytes; findings remain unverified. Handoff preparation/read
+   re-reads and compares exact bytes. The existing T09 persistence test rejects a
+   fabricated *decision* ref at brief creation, but is not the proposal-path test.
+   Before final sign-off, add the public proposal → rejected brief negative case
+   and have the owners resolve or explicitly accept/document the submission-time
+   limitation. Do not claim model-provided digests were verified on submission.
+2. **Choose the capture machine and prepare one identified build.** Andrew drives
+   or independently verifies; Marc captures. Use the merged operator setup, then
+   inspect capabilities and listProjects through the actual host. Require both
+   alpha/beta snapshots and record contract 0.4.0 plus their full commits. Old
+   empty-portfolio reports are historical. Never run the untracked live script
+   owned by another session without coordinating its use.
+3. **Run and record the actual Q15 loop.** Model reads bounded evidence from both
+   repositories, publishes its tentative hypothesis, then consumes Marc's selected
+   correction: “Keep alpha and beta independent; similar code is not permission
+   to introduce a shared dependency.” Admit a fresh run, observe the model's changed
+   conclusion, reopen the investigation, and verify/export the revised brief.
+   Preserve the first brief too: old findings remain historical/unverified, not
+   deleted. A scripted SDK proposal is insufficient for this requirement.
+4. **Finish the receipt and acceptance.** Record commit/config, host/model versions,
+   run/decision/brief IDs, source and body hashes, exact capabilities and limitations.
+   Preserve and hash the first unmodified original recording, fill the shared
+   manifest, and have Andrew/Marc inspect the evidence. Run combined regressions
+   on that build; retain the separate recording-host isolation receipt.
+5. **Review and merge PR #27.** Its MCP/exact-byte tests and manifest complement
+   the already merged PR #32. T11 is DONE only after the recording/acceptance and
+   remaining T11 work are integrated; green local tests alone are PARTIAL.
+
+Search/readGuidance remain unbound: capture must say **browse + exact reads**.
+Hosted identity, remote MCP, deployment, issue publication and outcome ingestion
+are not established by the local recording. No new provider library or production
+feature is required to attempt it. Historical sections below keep their original
+commands/results and must not be read as current dependency status.
 
 ## What exists now
 
@@ -48,18 +95,19 @@ If Bun is missing from PATH in a temporary worktree, use the installed
 | Regression/capture ownership | Andrew + Marc | This session owns the prerequisite tests and capture kit. Andrew reviews negative cases, observes effects, and independently accepts the recording. Confirm who drives and who records. |
 | Search and coverage | Andrew, T07 #7 | Libraries exist; searchSources and readGuidance remain unbound in main. Supply merged handler SHA and real source-ref round trip, or explicitly agree a bounded browse/exact-read demonstration. Do not advertise search as connected. |
 | Analyzer isolation | Andrew | Andrew reports all 25 Q13 tests passed with bwrap on his machine in PR #32. This sandbox still skips them; retain his receipt separately and rerun on the final recording commit. |
-| Live source ingestion | Eassa T08 #21 / draft PR #29 | Concrete blocker: internal snapshots:register with CLI --identity reports function not found, while the same internal call without identity correctly rejects unauthenticated. Backend portfolio remains empty per PR #29/#31 evidence. Need a supported, reviewed operator ingestion path preserving verified identity; no auth bypass. |
+| Live source ingestion | Eassa T08 #21 / merged PR #29 | **CODE BLOCKER RESOLVED.** Reviewed internal operator provisioning and local:setup are merged. T08 reports a seeded live SDK/Claude host pass on its backend. Run setup/preflight on the selected capture machine; do not infer its portfolio from another host or the old T10 empty-portfolio receipt. |
 | Persistent workbench/brief | T09 #20 | **MERGED** at 1424f5d. Source UI and protected prepare/readHandoff, ranged export and acceptance ledger are present. New T11 MCP/handler integration passes; authenticated browser behavior still needs I01. |
-| Live reasoning/correction | Eassa, T10a #28 / PR #31; T10 driver session | **MERGED** at 76c193b with contract 0.4.0. Public beginHostRun/submitProposal through saved-brief export now pass the T11 MCP integration. Actual host/model reasoning and changed comparison after correction remain NOT RUN; deterministic proposals do not satisfy that acceptance. |
+| Live reasoning/correction | T10 driver session + Andrew/Marc | **PR #37 MERGED** at c14ced5. Scripted comparison/correction/revised and frozen briefs pass. Its live Claude acceptance is preflight only; the actual model must still propose, consume the human correction, revise, reopen and export during one recorded run. |
 | Browser identity | Andrew I01 #17 | Draft PR #33 has WorkOS login wiring and issuer configuration; its receipt says Convex token acceptance and passing the user token into dispatch remain NOT RUN/incomplete. Local stdio identity is a separate mode. Agree the permitted capture surface before rehearsal. |
 | Full recording acceptance | Andrew + Marc | Same tested commit/config for source ingestion, driver, decisions and brief; actual driver events; first original recording location/hash; final brief ID/revision/hash; explicit missing capabilities. |
 
-T09 and T10 have removed the brief/publication-handler blockers. Q15 is still blocked:
-a live source portfolio and real reasoning round trip are still required. A local MCP
+T08, T09 and T10 now provide the implementation path for a local stdio Q15 attempt.
+The remaining gate is observed acceptance on the selected capture backend: verify its
+source portfolio, run real reasoning and preserve the recording. A local MCP
 recording does not establish remote MCP, hosted identity or deployment. VPS infrastructure
 work (I04 PR #30, now merged) is separate and does not establish deployed T11 acceptance.
 
-## Capture script once dependencies land
+## Capture script for the integrated local path
 
 Use only the owned synthetic alpha/beta sources. Keep the original recording outside
 the public repository. Do not put private sources, tokens, cookies, signing keys,
@@ -238,3 +286,27 @@ Verification for the T10 continuation:
   fresh positive publication, unchanged rows/receipts/jobs on rejection and replay,
   preserved correction and exact finding refs after reopen, export hash/length and
   rejected-claim absence. No production changes or local CodeRabbit run.
+
+## Combined checkpoint after PRs #29, #32 and #37
+
+Main `c14ced5`, contract 0.4.0. Updated root main and isolated T11; preserved all
+untracked session files. A concurrent remote merge had the same committed tree
+and was integrated without overwriting it. No source code authored in this sync.
+
+- `bun run verify`: **exit 0, 568 passed / 25 existing isolation skips / 42 files**;
+  frozen dependencies, drift, lint, types and production build pass. Log:
+  `/tmp/think-wide-t11-current-verify.log`.
+- `env -u VITE_CONVEX_URL bun run test:browser`: **exit 0, 7 passed / 1 file** after
+  retrying with loopback/browser permission. The first sandbox run failed startup
+  with listen EPERM and watcher EMFILE; it was not a browser acceptance pass. Retry
+  log: `/tmp/think-wide-t11-current-browser-retry.log`.
+- These browser checks exercise the synthetic workshop only, not authenticated
+  backend workbench persistence or Q15. No live model/setup/deployment or recording
+  was run in this sync. T08's seeded host receipt belongs to its original environment.
+- Adversarial review: checked merged production/authorization changes and published
+  evidence against current handlers; retained the open proposal-digest concern,
+  exact handoff byte-check distinction and honest historical evidence layers.
+  `git diff --check` clean. No local CodeRabbit run.
+
+Status: **PARTIAL / ready to attempt local live acceptance**, subject to the
+capture-machine preflight and explicit evidence-integrity review above.
