@@ -1,0 +1,41 @@
+{
+  "task": "T11",
+  "case": "Q15",
+  "status": "not_run",
+  "evidenceLevel": "not_run",
+  "recordedAt": null,
+  "tester": null,
+  "reviewer": null,
+  "build": {
+    "commit": null,
+    "worktreeClean": null,
+    "contractVersion": null,
+    "appMode": null,
+    "backendBuild": null,
+    "configurationSummaryWithoutSecrets": null
+  },
+  "driver": {
+    "kind": null,
+    "host": null,
+    "hostVersion": null,
+    "model": null,
+    "protocolVersion": null,
+    "actualRoundTripObserved": false
+  },
+  "sources": [],
+  "investigationId": null,
+  "correction": { "decisionId": null, "revision": null, "observedEffect": null },
+  "reopen": { "surface": null, "revision": null, "observed": false },
+  "brief": { "handoffId": null, "revision": null, "bodySha256": null, "verified": false },
+  "originalRecording": { "privateLocation": null, "sha256": null, "unmodified": null },
+  "checks": [
+    { "case": "Q01", "status": "not_run", "layer": null, "receipt": null },
+    { "case": "Q04", "status": "not_run", "layer": null, "receipt": null },
+    { "case": "Q06", "status": "not_run", "layer": null, "receipt": null },
+    { "case": "Q07", "status": "not_run", "layer": null, "receipt": null },
+    { "case": "Q15", "status": "not_run", "layer": null, "receipt": null }
+  ],
+  "verification": { "command": null, "exitCode": null, "passed": null, "skipped": null, "logLocation": null },
+  "missingCapabilities": [],
+  "nextAction": "Fill only after observing the identified combined build; no recording has been captured by this template."
+}
