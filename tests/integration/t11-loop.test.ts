@@ -10,8 +10,8 @@
  *   - No reasoning driver. The "model" publication is this test calling
  *     internal.runs.publish directly. Q15 stays NOT RUN until T10 supplies a real
  *     driver and the loop is recorded.
- *   - No brief. prepareHandoff/readHandoff are in the contract but have no handler at
- *     this commit; the last test pins that so the gap is stated rather than implied.
+ *   - No brief. prepareHandoff/readHandoff have no handler at ecd0be2; T09 (PR #20)
+ *     adds them. Extend the loop to prepare -> read -> body-hash once that merges.
  *   - Exact bytes are T05/Q04's job. The refs here resolve against indexed rows only.
  */
 
@@ -20,7 +20,6 @@ import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
 import { api, internal } from "../../convex/_generated/api";
 import schema from "../../convex/schema";
-import { OPERATIONS } from "../../generated/operations";
 import type { OperationError, SourceRef } from "../../generated/types";
 import { PRINCIPAL_A, PRINCIPAL_B } from "../fixtures/identities";
 
@@ -382,16 +381,5 @@ describe("T11 integrated loop, local real handlers", () => {
 				})
 			).question,
 		).toBe("B's own question");
-	});
-
-	test("brief step is a stated gap: handoff operations are in the contract with no handler bound", () => {
-		const contract = OPERATIONS.map((operation) => operation.operationId);
-		expect(contract).toEqual(
-			expect.arrayContaining(["prepareHandoff", "readHandoff"]),
-		);
-		const bound = Object.keys(modules).join("\n");
-		expect(bound).not.toMatch(/handoff/i);
-		// When this fails, a handler landed: replace this test with the real
-		// prepare -> read -> body-hash check and extend the loop above to the brief.
 	});
 });
