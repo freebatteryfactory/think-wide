@@ -1,0 +1,5 @@
+# Use only with a distinct --project-name think-wide-restore-* and NEW volumes.
+# No app or ingress; no outbound provider access while replaying a restored database.
+networks:
+  private:
+    internal: true

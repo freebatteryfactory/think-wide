@@ -7,7 +7,7 @@ import type {
 	ReadOperationId,
 	StateOperationId,
 } from "../../generated/operations";
-import type { Decision, Investigation, Run } from "../../generated/types";
+import type { Decision, HandoffSummary, Investigation, Run } from "../../generated/types";
 import * as validators from "../../generated/validators.js";
 import { mutation, type QueryCtx, query } from "../_generated/server";
 import {
@@ -77,6 +77,7 @@ async function authorize(
 	ctx: AuthorizedCtx,
 	request: Requests[keyof Requests],
 ): Promise<void> {
+	if ("proposal" in request) await ctx.authorizeProposal(request.proposal);
 	if ("snapshotId" in request) {
 		await ctx.loadAuthorized("snapshot", request.snapshotId);
 	}
@@ -93,10 +94,11 @@ async function authorize(
 async function reread(
 	ctx: AuthorizedCtx,
 	result: ResultId,
-): Promise<Investigation | Decision | Run> {
+): Promise<Investigation | Decision | Run | HandoffSummary> {
 	if (result.resultKind === "investigation")
 		return ctx.readInvestigation({ investigationId: result.resultId });
 	if (result.resultKind === "decision") return ctx.decision(result.resultId);
+	if (result.resultKind === "handoff") return ctx.handoffs.summary(result.resultId);
 	return ctx.run(result.resultId);
 }
 
@@ -105,7 +107,10 @@ function responseFor<K extends keyof Responses>(
 	response: unknown,
 ): Responses[K] {
 	validateResponse(id, response);
-	if (new TextEncoder().encode(JSON.stringify(response)).length > OPERATION_LIMITS.resultBytes)
+	if (
+		new TextEncoder().encode(JSON.stringify(response)).length >
+		OPERATION_LIMITS.resultBytes
+	)
 		fail("limit_exceeded", "Operation response exceeds 16 KiB");
 	return response as Responses[K];
 }

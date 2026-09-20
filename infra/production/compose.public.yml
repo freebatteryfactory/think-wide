@@ -1,0 +1,5 @@
+# Activation is a later reviewed release after I01 + browser gateway acceptance.
+# No bootstrap or preparation command uses this file.
+services:
+  ingress:
+    ports: ["80:80", "443:443"]

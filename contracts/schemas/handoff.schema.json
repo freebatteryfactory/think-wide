@@ -42,13 +42,45 @@
 			"title": "HandoffTarget",
 			"type": "object",
 			"additionalProperties": false,
-			"required": ["repositoryId", "baseCommit"],
+			"required": ["repositoryId", "baseCommit", "hashAlgorithm"],
 			"properties": {
 				"repositoryId": {
 					"$ref": "common.schema.json#/$defs/Id"
 				},
 				"baseCommit": {
 					"$ref": "common.schema.json#/$defs/CommitId"
+				},
+				"hashAlgorithm": {
+					"$ref": "common.schema.json#/$defs/HashAlgorithm"
+				}
+			},
+			"if": {
+				"type": "object",
+				"required": ["hashAlgorithm"],
+				"properties": {
+					"hashAlgorithm": {
+						"const": "sha1"
+					}
+				}
+			},
+			"then": {
+				"type": "object",
+				"required": ["baseCommit"],
+				"properties": {
+					"baseCommit": {
+						"type": "string",
+						"pattern": "^[0-9a-f]{40}$"
+					}
+				}
+			},
+			"else": {
+				"type": "object",
+				"required": ["baseCommit"],
+				"properties": {
+					"baseCommit": {
+						"type": "string",
+						"pattern": "^[0-9a-f]{64}$"
+					}
 				}
 			}
 		},
@@ -68,7 +100,13 @@
 						"$ref": "common.schema.json#/$defs/Id"
 					},
 					"kind": {
-						"enum": ["constraint", "rejected_approach", "correction"]
+						"enum": [
+							"constraint",
+							"rejected_approach",
+							"correction",
+							"acceptance"
+						],
+						"description": "Mirrors Decision.kind (rejection is rendered as rejected_approach). Acceptance decisions are constraints on the specialist too: they say what the human already agreed to."
 					},
 					"category": {
 						"$ref": "common.schema.json#/$defs/DecisionCategory"

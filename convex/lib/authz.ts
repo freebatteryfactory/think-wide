@@ -14,12 +14,16 @@ import type {
 	Run,
 	SourceRef,
 	Project,
+	Proposal,
+	PrepareHandoffRequest,
 } from "../../generated/types";
 import * as validators from "../../generated/validators.js";
 import type { Doc } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { decode, fail } from "./validation";
 import { SourceAccess } from "./sources";
+import { publishAuthorizedRun } from "./publication";
+import { createHandoff, HandoffAccess } from "./handoffs";
 
 export async function requirePrincipal(
 	ctx: Pick<QueryCtx, "auth">,
@@ -64,6 +68,7 @@ type Fence = Doc<"runs">["fences"][number];
 /** This capability exposes no raw database, auth, scheduler, or service credentials. */
 export class AuthorizedCtx {
 	readonly sources: SourceAccess;
+	readonly handoffs: HandoffAccess;
 	readonly principal: Principal;
 	readonly operationId: OperationId;
 	#ctx: QueryCtx;
@@ -73,6 +78,7 @@ export class AuthorizedCtx {
 		this.#ctx = ctx;
 		this.principal = principal;
 		this.operationId = operationId;
+		this.handoffs = new HandoffAccess(ctx, this);
 		this.sources = new SourceAccess(ctx, principal, (snapshotId) =>
 			this.requireAccess("snapshot", snapshotId),
 		);
@@ -179,6 +185,30 @@ export class AuthorizedCtx {
 				throw error;
 			}
 		}
+	}
+
+	/** Called by the operation pipeline before receipts, including replays. It checks
+	 * authority, not mutable run status, so an authorized retry remains replayable. */
+	async authorizeProposal(proposal: Proposal): Promise<Doc<"runs">> {
+		const investigation = await this.investigation(proposal.investigationId);
+		if (!proposal.runId)
+			fail("invalid_request", "Host admission is required before submission", {
+				details: [
+					{
+						path: "/proposal/runId",
+						problem: "Call beginHostRun before reasoning",
+					},
+				],
+			});
+		const row = await this.loadAuthorized("run", proposal.runId);
+		if (
+			row.principal !== this.principal.id ||
+			row.investigationId !== proposal.investigationId
+		)
+			fail("not_found", "Resource not found");
+		for (const claim of proposal.claims)
+			await this.authorizeRefs(claim.refs, investigation);
+		return row;
 	}
 
 	async authorizeDecision(
@@ -376,6 +406,10 @@ export class AuthorizedMutationCtx extends AuthorizedCtx {
 		});
 	}
 
+	async createHandoff(request: PrepareHandoffRequest): Promise<string> {
+		return createHandoff(this.#ctx, this, request);
+	}
+
 	async createInvestigation(
 		value: Omit<Investigation, "investigationId">,
 	): Promise<string> {
@@ -488,6 +522,23 @@ export class AuthorizedMutationCtx extends AuthorizedCtx {
 			body: JSON.stringify({ ...investigation, currentRunId: id }),
 		});
 		return id;
+	}
+
+	async submitProposal(proposal: Proposal): Promise<string> {
+		const row = await this.authorizeProposal(proposal);
+		const run = decode<Run>(validators.Run, row.body);
+		if (run.driver !== "host")
+			fail("unsupported", "Public submission requires a host run");
+		const investigation = await this.investigation(proposal.investigationId);
+		if (proposal.baseRevision !== investigation.revision)
+			fail("revision_conflict", "Investigation revision changed", {
+				currentRevision: investigation.revision,
+			});
+		const outcome = await publishAuthorizedRun(this.#ctx, this, proposal, row);
+		// A public contract error rolls back this transaction, including any superseded
+		// patch. Internal publication instead returns its outcome and persists that status.
+		if (!outcome.published) fail("unsupported", "Run is no longer publishable");
+		return investigation.investigationId;
 	}
 
 	async cancelRun(id: string): Promise<void> {

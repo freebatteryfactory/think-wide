@@ -62,6 +62,11 @@ export default defineSchema({
 		"investigationId",
 		"resultingRevision",
 	]),
+	handoffs: defineTable({
+		investigationId: v.id("investigations"),
+		snapshotIds: v.array(v.string()),
+		body: v.string(),
+	}),
 	receipts: defineTable({
 		principal: v.string(),
 		operationId: v.string(),
@@ -71,6 +76,7 @@ export default defineSchema({
 			v.literal("investigation"),
 			v.literal("decision"),
 			v.literal("run"),
+			v.literal("handoff"),
 		),
 		resultId: v.string(),
 	}).index("by_principal_operation_key", [

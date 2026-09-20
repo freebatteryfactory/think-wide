@@ -395,8 +395,60 @@
 				"handoffRevision": {
 					"type": "integer",
 					"minimum": 1
+				},
+				"detail": {
+					"enum": ["full", "summary", "body"]
+				},
+				"byteRange": {
+					"$ref": "source-ref.schema.json#/properties/byteRange"
 				}
-			}
+			},
+			"allOf": [
+				{
+					"if": {
+						"properties": {
+							"detail": {
+								"const": "body"
+							}
+						},
+						"required": ["detail"]
+					},
+					"then": {
+						"required": ["handoffRevision", "byteRange"],
+						"properties": {
+							"handoffRevision": {
+								"type": "integer",
+								"minimum": 1
+							},
+							"byteRange": {
+								"$ref": "source-ref.schema.json#/properties/byteRange"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"required": ["byteRange"],
+						"properties": {
+							"byteRange": {
+								"$ref": "source-ref.schema.json#/properties/byteRange"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"detail": {
+								"const": "body"
+							},
+							"handoffRevision": {
+								"type": "integer",
+								"minimum": 1
+							}
+						},
+						"required": ["detail", "handoffRevision"]
+					}
+				}
+			]
 		}
 	}
 }

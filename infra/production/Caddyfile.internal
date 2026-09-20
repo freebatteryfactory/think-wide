@@ -1,0 +1,9 @@
+{
+	admin off
+	auto_https disable_redirects
+}
+
+https://convex.internal:8443 {
+	tls internal
+	reverse_proxy backend:3210
+}
