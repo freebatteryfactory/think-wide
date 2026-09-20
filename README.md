@@ -51,6 +51,8 @@ See [commands, evidence and limits](docs/evidence/T08-local-setup.md).
 
 Before every push: `bun run verify` (same command CI runs).
 
+Real-browser checks (focus rings, hover, self-hosted fonts, mobile layout, no console errors, no off-origin requests) are a separate opt-in suite: `bun run browser:install` once, then `bun run test:browser`. Without Chromium it skips and says so; a skip is not a pass.
+
 Only Eassa changes `package.json` / `bun.lock`. Everyone else installs with `--frozen-lockfile`.
 
 ## Where things go
