@@ -1,0 +1,50 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "handoff-summary.schema.json",
+	"title": "HandoffSummary",
+	"description": "Immutable brief identity and exact UTF-8 body size. Read body windows with the pinned revision.",
+	"type": "object",
+	"additionalProperties": false,
+	"required": [
+		"handoffId",
+		"handoffRevision",
+		"investigationId",
+		"investigationRevision",
+		"targetRepository",
+		"audience",
+		"bodyHash",
+		"preparedAt",
+		"bodyByteLength"
+	],
+	"properties": {
+		"handoffId": {
+			"$ref": "handoff.schema.json#/properties/handoffId"
+		},
+		"handoffRevision": {
+			"$ref": "handoff.schema.json#/properties/handoffRevision"
+		},
+		"investigationId": {
+			"$ref": "handoff.schema.json#/properties/investigationId"
+		},
+		"investigationRevision": {
+			"$ref": "handoff.schema.json#/properties/investigationRevision"
+		},
+		"targetRepository": {
+			"$ref": "handoff.schema.json#/properties/targetRepository"
+		},
+		"audience": {
+			"$ref": "handoff.schema.json#/properties/audience"
+		},
+		"bodyHash": {
+			"$ref": "handoff.schema.json#/properties/bodyHash"
+		},
+		"preparedAt": {
+			"$ref": "handoff.schema.json#/properties/preparedAt"
+		},
+		"bodyByteLength": {
+			"type": "integer",
+			"minimum": 1,
+			"maximum": 262144
+		}
+	}
+}

@@ -7,7 +7,8 @@ import type {
 	Evidence,
 	GetCapabilitiesRequest,
 	GetRunRequest,
-	Handoff,
+	HandoffRead,
+	HandoffSummary,
 	Investigation,
 	ListProjectsRequest,
 	OpenInvestigationRequest,
@@ -25,7 +26,7 @@ import type {
 	SubmitProposalRequest,
 } from "./types";
 
-export const CONTRACT_VERSION = "0.2.0" as const;
+export const CONTRACT_VERSION = "0.3.0" as const;
 
 export const OPERATIONS = [
 	{
@@ -290,7 +291,7 @@ export const OPERATIONS = [
 		"operationId": "prepareHandoff",
 		"summary": "Freeze an implementation brief revision with body hash",
 		"request": "requests.schema.json#/$defs/PrepareHandoffRequest",
-		"response": "handoff.schema.json",
+		"response": "handoff-summary.schema.json",
 		"effect": "state",
 		"exposure": [
 			"http",
@@ -299,15 +300,16 @@ export const OPERATIONS = [
 		"approval": false,
 		"profile": "required",
 		"ticket": "T09",
+		"handler": "handoffs:prepareHandoff",
 		"requestType": "PrepareHandoffRequest",
-		"responseType": "Handoff",
+		"responseType": "HandoffSummary",
 		"entriesType": null
 	},
 	{
 		"operationId": "readHandoff",
 		"summary": "Exact reviewed brief text plus structured references",
 		"request": "requests.schema.json#/$defs/ReadHandoffRequest",
-		"response": "handoff.schema.json",
+		"response": "handoff-read.schema.json",
 		"effect": "read",
 		"exposure": [
 			"http",
@@ -316,8 +318,9 @@ export const OPERATIONS = [
 		"approval": false,
 		"profile": "required",
 		"ticket": "T09",
+		"handler": "handoffs:readHandoff",
 		"requestType": "ReadHandoffRequest",
-		"responseType": "Handoff",
+		"responseType": "HandoffRead",
 		"entriesType": null
 	}
 ] as const;
@@ -362,8 +365,8 @@ export type OperationResponseMap = {
 	requestAnalysis: Run;
 	getRun: Run;
 	cancelRun: Run;
-	prepareHandoff: Handoff;
-	readHandoff: Handoff;
+	prepareHandoff: HandoffSummary;
+	readHandoff: HandoffRead;
 };
 
 /** Operation ids by effect class. */
@@ -383,7 +386,9 @@ export const OPERATION_HANDLERS = {
 	"recordDecision": "decisions:recordDecision",
 	"requestAnalysis": "runs:admitRun",
 	"getRun": "runs:getRun",
-	"cancelRun": "runs:cancelRun"
+	"cancelRun": "runs:cancelRun",
+	"prepareHandoff": "handoffs:prepareHandoff",
+	"readHandoff": "handoffs:readHandoff"
 } as const;
 export type ImplementedOperationId = keyof typeof OPERATION_HANDLERS;
 
@@ -391,7 +396,5 @@ export type ImplementedOperationId = keyof typeof OPERATION_HANDLERS;
 export const UNIMPLEMENTED_OPERATIONS = [
 	"searchSources",
 	"readGuidance",
-	"submitProposal",
-	"prepareHandoff",
-	"readHandoff"
+	"submitProposal"
 ] as const satisfies readonly OperationId[];

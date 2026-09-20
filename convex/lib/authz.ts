@@ -14,12 +14,14 @@ import type {
 	Run,
 	SourceRef,
 	Project,
+	PrepareHandoffRequest,
 } from "../../generated/types";
 import * as validators from "../../generated/validators.js";
 import type { Doc } from "../_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
 import { decode, fail } from "./validation";
 import { SourceAccess } from "./sources";
+import { createHandoff, HandoffAccess } from "./handoffs";
 
 export async function requirePrincipal(
 	ctx: Pick<QueryCtx, "auth">,
@@ -64,6 +66,7 @@ type Fence = Doc<"runs">["fences"][number];
 /** This capability exposes no raw database, auth, scheduler, or service credentials. */
 export class AuthorizedCtx {
 	readonly sources: SourceAccess;
+	readonly handoffs: HandoffAccess;
 	readonly principal: Principal;
 	readonly operationId: OperationId;
 	#ctx: QueryCtx;
@@ -73,6 +76,7 @@ export class AuthorizedCtx {
 		this.#ctx = ctx;
 		this.principal = principal;
 		this.operationId = operationId;
+		this.handoffs = new HandoffAccess(ctx, this);
 		this.sources = new SourceAccess(ctx, principal, (snapshotId) =>
 			this.requireAccess("snapshot", snapshotId),
 		);
@@ -374,6 +378,10 @@ export class AuthorizedMutationCtx extends AuthorizedCtx {
 			role: "owner",
 			epoch: 1,
 		});
+	}
+
+	async createHandoff(request: PrepareHandoffRequest): Promise<string> {
+		return createHandoff(this.#ctx, this, request);
 	}
 
 	async createInvestigation(
