@@ -120,4 +120,7 @@ work pins that exact commit. Optional `URL@FULL_COMMIT` makes reruns reproducibl
 It uses the existing bounded Git reader without checkout or target execution,
 completes bounded source/history caches, and advertises membership last. This is
 an administrative CLI with an explicit CLI environment file and owner recipient;
-no admin key enters app code. It is not the future public import path B.
+no admin key enters app code. An internal-only operator query retrieves the
+original indexing timestamp for exact immutable registration replay; it applies
+the same recipient and manual-owner checks. It is not the future public import
+path B.

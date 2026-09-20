@@ -62,8 +62,7 @@ p-queue at `180ab9e25cd10b6f548767d7176076b50d25e188` (HEAD resolved once,
 All three exited 0 under the stated resource limits; temporary directories were
 removed. This proves the public Git fetch path, not hosted account access.
 
-Full gate and disposable-backend seed/verified-JWT acceptance results are recorded
-below when actually run. Production catalog publication and hosted WorkOS account
+Full gate and disposable-backend seed/verified-JWT acceptance results follow. Production catalog publication and hosted WorkOS account
 acceptance are NOT RUN by this branch. No shared backend or VPS is mutated.
 
 ### Final local gate
@@ -75,7 +74,46 @@ and the catalog contract test. Earlier gate attempts exposed obsolete version,
 envelope-count and uniqueness assertions; those now explicitly permit the two
 operations sharing the projects envelope. No test is skipped or auth mocked.
 
-The coordinator ran `bunx convex dev --once` against the disposable loopback
+The coordinator ran `bunx convex dev --once --env-file /tmp/think-wide-catalog-acceptance-kv5cxtxc/admin.env.local` against the disposable loopback
 backend on port 43320: exit 0 (2.93 seconds). This regenerated the Convex API and
 proved the generated validators bundle with the catalog handler. Shared backends
 3210/3220 and the VPS were not used for these writes.
+
+
+### Disposable backend and MCP acceptance (coordinator-run)
+
+The coordinator ran `bun run catalog:seed --env-file
+/tmp/think-wide-catalog-acceptance-kv5cxtxc/admin.env.local --owner
+'https://operator.example|catalog-owner'` with the three complete public HTTPS
+GitHub URLs above, each suffixed with its recorded full commit. Exit **0**:
+p-limit cached 16 blobs, p-queue cached 23 with one explicitly uncached oversized
+blob, and p-timeout cached 13. All three reported `historyComplete: false`.
+
+`/tmp/catalog-live-acceptance.ts` exited **0**, using the real SDK stdio transport
+for principal A and SDK in-memory transport for B, with independently signed
+verified local JWTs against disposable backend 43320. The run checked:
+
+- Exactly 17 generated MCP tools; both principals claim the same three snapshots;
+  receipt replay returns the same result.
+- Exact `index.js` source equals the bytes from each pinned public GitHub commit;
+  SHA-256 source digests and Git blob SHA-1 match.
+- Investigations, decisions, runs and briefs remain private across accounts.
+- Correction advances revision, fences late work, survives replay, and changed
+  decision arguments conflict.
+- Public calls cannot invoke operator provisioning. The deployed function spec
+  marks all five operator functions internal.
+
+The first acceptance attempt's final assertion expected development error text;
+the backend redacted it. The assertion was corrected to check actual rejection
+and deployed visibility, and the complete probe passed on rerun. No authorization
+was changed. Status is **local real handlers + live public Git + local MCP
+transport**, not hosted WorkOS users, remote MCP OAuth, or production deployment.
+
+
+The coordinator repeated exact pinned seed ingestion: exit **0**, identical three
+snapshot IDs and cache counts. After the I01 merge, they configured only the
+isolated backend with a non-secret unused WorkOS client placeholder (local-demo
+still trusts only its local issuer) and repeated `bunx convex dev --once
+--env-file /tmp/think-wide-catalog-acceptance-kv5cxtxc/admin.env.local`: exit **0**,
+2.57 seconds. The complete real acceptance probe then passed again against those
+final functions. No hosted provider trust or shared-backend setting was changed.
