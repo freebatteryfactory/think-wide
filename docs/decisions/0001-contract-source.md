@@ -52,3 +52,29 @@ first-parent commits, all parent IDs, subject, timestamp, first-parent compariso
 (null for roots), and exact changed paths. Limits reject oversized records rather than
 shortening source-derived text; bounded prefixes remain explicitly partial. No request
 shape or decision category is changed. Contract review remains with @heyoub.
+
+## Additive 0.2.1: explicit host admission (T10a, issue #28)
+
+`beginHostRun` is a state operation exposed through HTTP and MCP. It reuses the
+existing `RequestAnalysisRequest` admission shape and returns `Run`, but fixes the
+driver to `host` and never dispatches a model call. The existing `requestAnalysis`
+operation remains HTTP-only and fixes its driver to `backend`. Both use the same
+atomic admission, revision and grant-epoch fences; at most one active run exists
+per investigation revision. A host-supplied budget is declarative, not enforcement
+of the external host's model spending.
+
+`submitProposal` is now bound to the shared Convex operation pipeline. Public
+submission requires a `runId` admitted by the same verified caller with driver
+`host`; omission is `invalid_request`. The general Proposal schema remains
+unchanged. Nested investigation, run and source references are authorized before
+receipt replay, and publication rechecks the admitted revision and grant epochs.
+Hosts should admit before reading the evidence they reason over. An admission
+fence does not attest any earlier reads or model work.
+
+This initial slice rejects compositions and nonempty claim `unknowns` with
+`unsupported`, rather than discarding data without a durable representation.
+Claim statements longer than Finding's 512-character summary limit are rejected
+with `limit_exceeded`; findings stay `unverified`. Public fence rejection throws
+and rolls back all writes. Internal publication returns its rejection outcome so
+its `superseded` status persists. Human decisions already supersede current active
+runs in their own transaction. No scheduler or provider call is added.

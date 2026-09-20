@@ -759,7 +759,7 @@ export const MCP_TOOLS = [
 		"description": "Submit a tentative evidence-backed comparison against a base revision",
 		"operationId": "submitProposal",
 		"effect": "state",
-		"handler": null,
+		"handler": "proposals:submitProposal",
 		"inputSchema": {
 			"title": "SubmitProposalRequest",
 			"type": "object",
@@ -1210,6 +1210,86 @@ export const MCP_TOOLS = [
 		}
 	},
 	{
+		"name": "beginHostRun",
+		"description": "Admit a host reasoning run before analysis; no model call is dispatched",
+		"operationId": "beginHostRun",
+		"effect": "state",
+		"handler": "runs:beginHostRun",
+		"inputSchema": {
+			"title": "RequestAnalysisRequest",
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"investigationId",
+				"expectedRevision",
+				"purpose",
+				"requestKey"
+			],
+			"properties": {
+				"investigationId": {
+					"$ref": "#/$defs/Id"
+				},
+				"expectedRevision": {
+					"$ref": "#/$defs/Revision"
+				},
+				"purpose": {
+					"$ref": "#/$defs/ShortText"
+				},
+				"budget": {
+					"$ref": "#/$defs/Run_properties_budget"
+				},
+				"requestKey": {
+					"$ref": "#/$defs/RequestKey"
+				}
+			},
+			"$defs": {
+				"Id": {
+					"title": "Id",
+					"description": "Opaque identifier. An address, never a permission.",
+					"type": "string",
+					"minLength": 1,
+					"maxLength": 128,
+					"pattern": "^[A-Za-z0-9_:.-]+$"
+				},
+				"RequestKey": {
+					"title": "RequestKey",
+					"description": "Caller-chosen idempotency key. Same key + same args = same result; same key + different args = conflict.",
+					"type": "string",
+					"minLength": 8,
+					"maxLength": 128
+				},
+				"Revision": {
+					"title": "Revision",
+					"description": "Investigation revision N. Human corrections advance it and fence stale work.",
+					"type": "integer",
+					"minimum": 0
+				},
+				"Run_properties_budget": {
+					"title": "RunBudget",
+					"type": "object",
+					"additionalProperties": false,
+					"properties": {
+						"maxModelCalls": {
+							"type": "integer",
+							"minimum": 0,
+							"maximum": 4
+						},
+						"maxOutputTokens": {
+							"type": "integer",
+							"minimum": 1
+						}
+					}
+				},
+				"ShortText": {
+					"title": "ShortText",
+					"type": "string",
+					"minLength": 1,
+					"maxLength": 512
+				}
+			}
+		}
+	},
+	{
 		"name": "getRun",
 		"description": "Current authorized run status",
 		"operationId": "getRun",
@@ -1391,6 +1471,7 @@ export const MCP_TOOL_NAMES = [
 	"readInvestigation",
 	"recordDecision",
 	"submitProposal",
+	"beginHostRun",
 	"getRun",
 	"cancelRun",
 	"prepareHandoff",

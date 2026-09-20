@@ -43,8 +43,8 @@ const paths = (validator: v.Validator) =>
 	(validator.errors ?? []).map((e) => e.instancePath).sort();
 
 describe("contract 0.2.0: version", () => {
-	it("is 0.2.0", () => {
-		expect(CONTRACT_VERSION).toBe("0.2.0");
+	it("is 0.2.1 after additive host admission", () => {
+		expect(CONTRACT_VERSION).toBe("0.2.1");
 	});
 });
 
