@@ -121,7 +121,11 @@ describe("generated validators (contract 0.2.0)", () => {
 			investigationId: "inv_1",
 			investigationRevision: 0,
 			objective: "Align the command contract between A and B",
-			targetRepository: { repositoryId: "repo_a", baseCommit: sha },
+			targetRepository: {
+				repositoryId: "repo_a",
+				baseCommit: sha,
+				hashAlgorithm: "sha1",
+			},
 			constraints: [],
 			evidence: [],
 			acceptance: [{ behavior: "A and B agree", status: "not_run" }],

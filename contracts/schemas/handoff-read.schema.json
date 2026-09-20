@@ -1,0 +1,64 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "handoff-read.schema.json",
+	"title": "HandoffRead",
+	"description": "Default full brief (bounded by the response cap), summary, or an exact UTF-8 body window. Every read reauthorizes the entire frozen brief.",
+	"oneOf": [
+		{
+			"$ref": "handoff.schema.json"
+		},
+		{
+			"$ref": "handoff-summary.schema.json"
+		},
+		{
+			"$ref": "#/$defs/HandoffBodyWindow"
+		}
+	],
+	"$defs": {
+		"HandoffBodyWindow": {
+			"title": "HandoffBodyWindow",
+			"type": "object",
+			"additionalProperties": false,
+			"required": [
+				"handoffId",
+				"handoffRevision",
+				"bodyHash",
+				"bodyByteLength",
+				"content",
+				"byteRange",
+				"nextRange"
+			],
+			"properties": {
+				"handoffId": {
+					"$ref": "handoff-summary.schema.json#/properties/handoffId"
+				},
+				"handoffRevision": {
+					"$ref": "handoff-summary.schema.json#/properties/handoffRevision"
+				},
+				"bodyHash": {
+					"$ref": "handoff-summary.schema.json#/properties/bodyHash"
+				},
+				"bodyByteLength": {
+					"$ref": "handoff-summary.schema.json#/properties/bodyByteLength"
+				},
+				"content": {
+					"type": "string",
+					"maxLength": 2048
+				},
+				"byteRange": {
+					"$ref": "source-ref.schema.json#/properties/byteRange"
+				},
+				"nextRange": {
+					"oneOf": [
+						{
+							"type": "null"
+						},
+						{
+							"$ref": "source-ref.schema.json#/properties/byteRange"
+						}
+					]
+				}
+			}
+		}
+	}
+}
