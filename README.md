@@ -86,7 +86,7 @@ See [`docs/REPO_MAP.md`](docs/REPO_MAP.md) for every path and the ticket that ow
 
 ## Status
 
-As of 2026-09-20, main `672038f`. Status levels are separate and never promoted: NOT RUN → fixtures only → local real handlers → live provider/host → deployed.
+As of 2026-09-20. Status levels are separate and never promoted: NOT RUN → fixtures only → local real handlers → live provider/host → deployed.
 
 | Capability | Level |
 |---|---|
@@ -98,7 +98,8 @@ As of 2026-09-20, main `672038f`. Status levels are separate and never promoted:
 | Shared demo catalog (`claimDemoAccess`, `bun run catalog:seed`) | local real handlers; not seeded on the deployed backend, and no UI calls it yet |
 | WorkOS AuthKit login with Convex accepting the session token | **deployed**: `https://think-wide.fbf.systems` (evidence on issue #26) |
 | Literal + sandboxed structural search | built and tested, not wired to an operation (`searchModes: []`) |
-| Remote MCP over HTTP with OAuth (`/api/mcp`) | NOT RUN (PR #42; needs the MCP OAuth token profile verified) |
+| HTTP transport (`/api/mcp`, `/api/ops/:operationId`) with separate browser and MCP OAuth token profiles | local real handlers; MCP stays unconfigured (503) until a real OAuth token is verified |
+| Remote MCP host (Claude.ai / ChatGPT) over OAuth | NOT RUN |
 | Public source import (decision 0004) | design only |
 | Full-loop recording (T11) | NOT RUN |
 
