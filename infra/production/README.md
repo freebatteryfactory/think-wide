@@ -192,6 +192,17 @@ no automated destructive rollback or cross-version SQLite downgrade in these scr
    **503**. This does not block the authenticated website milestone. Capabilities describe evidence,
    never this checklist's intent.
 
+### After activation (activated 2026-09-20, evidence on #26)
+
+Every Compose command on the box must now include `-f compose.public.yml` and the
+`application` and `public` profiles, with `APP_IMAGE` set to the staged image ID.
+`control.py`'s own `compose()` loads only `compose.yml`: a bare `up` through it
+recreates the backend without `CONVEX_CLOUD_ORIGIN`. A failed `up` can leave the
+backend recreated but stopped; rerun the full command. Cold backups require
+stopping app and ingress first. `convex dev --once` writes `VITE_CONVEX_URL` into
+the checkout's `.env.local`; delete that file after an operator push through the
+tunnel so a later local build does not bake the tunnel address.
+
 ### Verification and compatibility references
 
 - `python3 -m unittest discover -s infra/production -p test_control.py`: filesystem,
