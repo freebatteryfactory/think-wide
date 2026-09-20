@@ -82,7 +82,8 @@ services:
     init: true
     restart: unless-stopped
     read_only: true
-    tmpfs: [/tmp:size=64m,mode=1777]
+    # Quoted: an unquoted comma splits this YAML flow sequence into two mounts.
+    tmpfs: ["/tmp:size=64m,mode=1777"]
     env_file: ${STATE_DIR:?set STATE_DIR}/app.env.local
     environment:
       NODE_ENV: production
