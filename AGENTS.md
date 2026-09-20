@@ -81,7 +81,7 @@ Do not duplicate a contract shape by hand in Zod, TypeScript, Convex validators,
 - If an installed API does not behave as its docs say after one documented route, **stop and report** the package version, the export you inspected, and what happened. Do not paper over it with `any`, `@ts-ignore`, `as unknown as`, a disabled validator, a skipped test, or a parallel interface.
 - Tests exercise real handlers. Never mock authorization to return deny, and never assert a pass you did not run.
 - Small commits whose message starts with the ticket id. Open a PR; do not merge your own.
-- Secrets live in `.env.local` only. Never print, commit, log, or paste tokens, keys, cookies, private source, or raw provider payloads, including in PR and issue comments.
+- Provided credentials live in `.env.local` only; generated local-demo signing material lives in gitignored `infra/.data/` with private files (0600) and directories (0700). Never print, commit, log, or paste tokens, keys, cookies, private source, or raw provider payloads, including in PR and issue comments.
 
 ## Reporting (paste-ready, every time)
 

@@ -19,9 +19,25 @@ bun install --frozen-lockfile
 bun run convex:up                 # self-hosted Convex on 127.0.0.1:3210 (dashboard :6791)
 cp .env.example .env.local
 bun run convex:key                # paste the output into CONVEX_SELF_HOSTED_ADMIN_KEY in .env.local
-bun run convex:dev                # pushes convex/ functions, regenerates convex/_generated, watches
+bun run convex:dev                # pushes Convex functions and watches
 bun run dev                       # http://localhost:3000
 ```
+
+### Local headless setup (blocked on the pinned backend)
+
+`bun run local:setup` is a **partial implementation**, not a working onboarding step.
+It configures local identity and pushes Convex, then stops during fixture ingestion:
+the pinned backend refuses an internal mutation combined with CLI `--identity`.
+See [the exact failure and evidence](docs/evidence/T08-local-setup.md). Do not use
+this command against another checkout's active backend: each checkout has its own
+local key, and configuring a different key replaces local trust.
+
+The intended setup is restricted to non-production `THINK_WIDE_MODE=local-demo`
+and a literal loopback backend. It reads the operator credential from `.env.local`,
+accepts no arguments, and imports only the committed synthetic alpha/beta bundles.
+It never executes repository code. Tests exercise the existing internal ingestion
+handlers, idempotency, exact reads and grant revocation. Those tests are not a live
+setup pass. Normal MCP calls use short-lived JWTs, never the operator credential.
 
 Before every push: `bun run verify` (same command CI runs).
 
