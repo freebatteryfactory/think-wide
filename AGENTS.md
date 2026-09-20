@@ -50,7 +50,7 @@ tests/       fixtures + acceptance cases  infra/ scripts/ docs/
 
 Each one exists because the alternative was examined and loses. Reasons are in `docs/decisions/0002-operation-pipeline.md`.
 
-1. **Identity comes only from verified auth** (`ctx.auth`). Never from a request field, header you invented, or function argument. Request schemas forbid identity fields; do not add one.
+1. **Identity comes only from verified auth** (`ctx.auth`). Never from a public request field, header you invented, or function argument. Request schemas forbid identity fields; do not add one. **Narrow operator exception (decision 0002):** internal-only administrative provisioning may name a recipient by full `tokenIdentifier` (`issuer|subject`). This is equivalent in trust to an admin database write, is never caller authentication, and must be unreachable from public/user-token surfaces. Admin credentials remain CLI-only; application code never receives them.
 2. **One operation pipeline.** Every public Convex function is registered through `convex/lib/operation.ts`: validate request → principal → receipt (state-changing ops) → handler → validate response (including `kind === envelopeKind` and each entry against the operation's `entries` schema) → finalize. Do not write a public function that bypasses it.
 3. **One door to protected data.** Handlers use `loadAuthorized` / `queryAuthorized` from `convex/lib/authz.ts`. No raw `ctx.db.get` / `ctx.db.query` on protected tables outside `convex/lib/`. A test enforces this.
 4. **Missing and forbidden are indistinguishable.** Same code (`not_found`), same message, no counts, no echoed ids. Authorize before you paginate, rank, or count.
@@ -81,7 +81,7 @@ Do not duplicate a contract shape by hand in Zod, TypeScript, Convex validators,
 - If an installed API does not behave as its docs say after one documented route, **stop and report** the package version, the export you inspected, and what happened. Do not paper over it with `any`, `@ts-ignore`, `as unknown as`, a disabled validator, a skipped test, or a parallel interface.
 - Tests exercise real handlers. Never mock authorization to return deny, and never assert a pass you did not run.
 - Small commits whose message starts with the ticket id. Open a PR; do not merge your own.
-- Secrets live in `.env.local` only. Never print, commit, log, or paste tokens, keys, cookies, private source, or raw provider payloads, including in PR and issue comments.
+- Provided credentials live in `.env.local` only; generated local-demo signing material lives in gitignored `infra/.data/` with private files (0600) and directories (0700). Never print, commit, log, or paste tokens, keys, cookies, private source, or raw provider payloads, including in PR and issue comments.
 
 ## Reporting (paste-ready, every time)
 

@@ -7,10 +7,16 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api } from "../../convex/_generated/api";
 import schema from "../../convex/schema";
 import { MCP_TOOL_NAMES } from "../../generated/mcp-tools";
+import {
+	OPERATIONS,
+	UNIMPLEMENTED_OPERATIONS,
+} from "../../generated/operations";
+import * as validators from "../../generated/validators.js";
 import { createMcpServer } from "../../src/server/mcp/server";
 import { dispatch } from "../../src/server/ops/dispatch";
 import { PRINCIPAL_A, PRINCIPAL_B } from "../fixtures/identities";
 
+const requestValidators = { ...validators };
 const modules = import.meta.glob("../../convex/**/*.ts");
 const identity = (p: typeof PRINCIPAL_A | typeof PRINCIPAL_B) => ({
 	issuer: p.issuer,
@@ -90,10 +96,19 @@ describe("Q14: MCP and dispatch use real operation handlers", () => {
 			expect(await call("requestAnalysis", {})).toMatchObject({
 				code: "capability_disabled",
 			});
-			// An exposed operation with no handler binding. listProjects served this role
-			// until T05 bound it; readGuidance is still unbound and accepts {}.
+			// Select an unbound exposed operation whose generated schema accepts {}.
+			const operation = OPERATIONS.find(
+				(op) =>
+					UNIMPLEMENTED_OPERATIONS.some((id) => id === op.operationId) &&
+					MCP_TOOL_NAMES.some((id) => id === op.operationId) &&
+					requestValidators[op.requestType]({}),
+			);
+			if (!operation)
+				throw new Error(
+					"Add a valid generated request fixture for an unimplemented MCP operation",
+				);
 			const disabled = await client.callTool({
-				name: "readGuidance",
+				name: operation.operationId,
 				arguments: {},
 			});
 			expect(disabled.isError).toBe(true);
