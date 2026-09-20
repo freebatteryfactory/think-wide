@@ -4,9 +4,19 @@ import { DECISION_EDITOR_HEADING } from "../catalog/ConstraintEditor";
 import { Button } from "../ui/button";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
-import { decisionLabels, isDecisionKind } from "./workbench";
+import {
+	decisionCategoryLabels,
+	decisionLabels,
+	isDecisionKind,
+} from "./workbench";
 
-type Draft = Pick<RecordDecisionRequest, "kind" | "statement">;
+type Draft = Pick<RecordDecisionRequest, "kind" | "statement" | "category">;
+
+function isDecisionCategory(
+	value: string,
+): value is NonNullable<Draft["category"]> {
+	return Object.hasOwn(decisionCategoryLabels, value);
+}
 type DecisionEditorProps = {
 	draft: Draft;
 	onDraftChange: (draft: Draft) => void;
@@ -63,6 +73,32 @@ export function DecisionEditor({
 									{label}
 								</option>
 							))}
+						</select>
+					</div>
+					<div className="form-field">
+						<Label htmlFor={`${id}-category`}>Category (optional)</Label>
+						<select
+							id={`${id}-category`}
+							value={draft.category ?? ""}
+							onChange={(event) => {
+								const value = event.target.value;
+								if (value === "") {
+									const next = { ...draft };
+									delete next.category;
+									onDraftChange(next);
+								} else if (isDecisionCategory(value)) {
+									onDraftChange({ ...draft, category: value });
+								}
+							}}
+						>
+							<option value="">Uncategorized</option>
+							{Object.entries(decisionCategoryLabels).map(
+								([category, label]) => (
+									<option key={category} value={category}>
+										{label}
+									</option>
+								),
+							)}
 						</select>
 					</div>
 					<div className="form-field">
