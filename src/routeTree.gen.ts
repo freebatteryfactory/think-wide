@@ -15,6 +15,8 @@ import { Route as DotwellKnownOauthProtectedResourceRouteImport } from './routes
 import { Route as ApiMcpRouteImport } from './routes/api/mcp'
 import { Route as HandoffsHandoffIdRouteImport } from './routes/handoffs.$handoffId'
 import { Route as InvestigationsInvestigationIdRouteImport } from './routes/investigations.$investigationId'
+import { Route as ApiAuthCallbackRouteImport } from './routes/api/auth/callback'
+import { Route as ApiAuthSignInRouteImport } from './routes/api/auth/sign-in'
 import { Route as ApiOpsOperationIdRouteImport } from './routes/api/ops.$operationId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -49,6 +51,16 @@ const InvestigationsInvestigationIdRoute =
     path: '/investigations/$investigationId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAuthCallbackRoute = ApiAuthCallbackRouteImport.update({
+  id: '/api/auth/callback',
+  path: '/api/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthSignInRoute = ApiAuthSignInRouteImport.update({
+  id: '/api/auth/sign-in',
+  path: '/api/auth/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiOpsOperationIdRoute = ApiOpsOperationIdRouteImport.update({
   id: '/api/ops/$operationId',
   path: '/api/ops/$operationId',
@@ -62,6 +74,8 @@ export interface FileRoutesByFullPath {
   '/api/mcp': typeof ApiMcpRoute
   '/handoffs/$handoffId': typeof HandoffsHandoffIdRoute
   '/investigations/$investigationId': typeof InvestigationsInvestigationIdRoute
+  '/api/auth/callback': typeof ApiAuthCallbackRoute
+  '/api/auth/sign-in': typeof ApiAuthSignInRoute
   '/api/ops/$operationId': typeof ApiOpsOperationIdRoute
 }
 export interface FileRoutesByTo {
@@ -71,6 +85,8 @@ export interface FileRoutesByTo {
   '/api/mcp': typeof ApiMcpRoute
   '/handoffs/$handoffId': typeof HandoffsHandoffIdRoute
   '/investigations/$investigationId': typeof InvestigationsInvestigationIdRoute
+  '/api/auth/callback': typeof ApiAuthCallbackRoute
+  '/api/auth/sign-in': typeof ApiAuthSignInRoute
   '/api/ops/$operationId': typeof ApiOpsOperationIdRoute
 }
 export interface FileRoutesById {
@@ -81,6 +97,8 @@ export interface FileRoutesById {
   '/api/mcp': typeof ApiMcpRoute
   '/handoffs/$handoffId': typeof HandoffsHandoffIdRoute
   '/investigations/$investigationId': typeof InvestigationsInvestigationIdRoute
+  '/api/auth/callback': typeof ApiAuthCallbackRoute
+  '/api/auth/sign-in': typeof ApiAuthSignInRoute
   '/api/ops/$operationId': typeof ApiOpsOperationIdRoute
 }
 export interface FileRouteTypes {
@@ -92,6 +110,8 @@ export interface FileRouteTypes {
     | '/api/mcp'
     | '/handoffs/$handoffId'
     | '/investigations/$investigationId'
+    | '/api/auth/callback'
+    | '/api/auth/sign-in'
     | '/api/ops/$operationId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -101,6 +121,8 @@ export interface FileRouteTypes {
     | '/api/mcp'
     | '/handoffs/$handoffId'
     | '/investigations/$investigationId'
+    | '/api/auth/callback'
+    | '/api/auth/sign-in'
     | '/api/ops/$operationId'
   id:
     | '__root__'
@@ -110,6 +132,8 @@ export interface FileRouteTypes {
     | '/api/mcp'
     | '/handoffs/$handoffId'
     | '/investigations/$investigationId'
+    | '/api/auth/callback'
+    | '/api/auth/sign-in'
     | '/api/ops/$operationId'
   fileRoutesById: FileRoutesById
 }
@@ -120,6 +144,8 @@ export interface RootRouteChildren {
   ApiMcpRoute: typeof ApiMcpRoute
   HandoffsHandoffIdRoute: typeof HandoffsHandoffIdRoute
   InvestigationsInvestigationIdRoute: typeof InvestigationsInvestigationIdRoute
+  ApiAuthCallbackRoute: typeof ApiAuthCallbackRoute
+  ApiAuthSignInRoute: typeof ApiAuthSignInRoute
   ApiOpsOperationIdRoute: typeof ApiOpsOperationIdRoute
 }
 
@@ -167,6 +193,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InvestigationsInvestigationIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/callback': {
+      id: '/api/auth/callback'
+      path: '/api/auth/callback'
+      fullPath: '/api/auth/callback'
+      preLoaderRoute: typeof ApiAuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/sign-in': {
+      id: '/api/auth/sign-in'
+      path: '/api/auth/sign-in'
+      fullPath: '/api/auth/sign-in'
+      preLoaderRoute: typeof ApiAuthSignInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/ops/$operationId': {
       id: '/api/ops/$operationId'
       path: '/api/ops/$operationId'
@@ -185,6 +225,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiMcpRoute: ApiMcpRoute,
   HandoffsHandoffIdRoute: HandoffsHandoffIdRoute,
   InvestigationsInvestigationIdRoute: InvestigationsInvestigationIdRoute,
+  ApiAuthCallbackRoute: ApiAuthCallbackRoute,
+  ApiAuthSignInRoute: ApiAuthSignInRoute,
   ApiOpsOperationIdRoute: ApiOpsOperationIdRoute,
 }
 export const routeTree = rootRouteImport
@@ -192,10 +234,11 @@ export const routeTree = rootRouteImport
   ._addFileTypes<FileRouteTypes>()
 
 import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
+import type { startInstance } from './start.ts'
 declare module '@tanstack/react-start' {
   interface Register {
     ssr: true
     router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
   }
 }
