@@ -1,0 +1,144 @@
+# Run through control.py; this is independent of infra/docker-compose.yml.
+name: think-wide-production
+x-logging: &logging
+  driver: local
+  options:
+    max-size: "10m"
+    max-file: "3"
+services:
+  backend:
+    image: ${BACKEND_IMAGE:?load images.env}
+    init: true
+    restart: unless-stopped
+    stop_signal: SIGINT
+    stop_grace_period: 30s
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-3210}:3210"
+      - "127.0.0.1:${ACTIONS_PORT:-3211}:3211"
+    volumes:
+      - data:/convex/data
+    env_file: ${STATE_DIR:?set STATE_DIR}/backend.env.local
+    environment:
+      CONVEX_CLOUD_ORIGIN: https://convex.internal:8443
+      CONVEX_SITE_ORIGIN: http://127.0.0.1:3211
+      REDACT_LOGS_TO_CLIENT: "true"
+      DISABLE_BEACON: "true"
+      DISABLE_METRICS_ENDPOINT: "true"
+      RUST_LOG: warn
+    networks: [private]
+    security_opt: [no-new-privileges:true]
+    cpus: 2
+    mem_limit: 3g
+    pids_limit: 512
+    logging: *logging
+    healthcheck:
+      test: [CMD, curl, -fsS, http://127.0.0.1:3210/version]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 15s
+
+  backend-tls:
+    image: ${CADDY_IMAGE:?load images.env}
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    volumes:
+      - ./Caddyfile.internal:/etc/caddy/Caddyfile:ro
+      - internal_tls:/data
+      - internal_config:/config
+    networks:
+      private:
+        aliases: [convex.internal]
+    depends_on:
+      backend:
+        condition: service_healthy
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    # Official Caddy binary carries this file capability, even for port 8443.
+    cap_add: [NET_BIND_SERVICE]
+    mem_limit: 128m
+    pids_limit: 128
+    logging: *logging
+
+  dashboard:
+    profiles: [admin]
+    image: ${DASHBOARD_IMAGE:?load images.env}
+    restart: unless-stopped
+    ports: ["127.0.0.1:${DASHBOARD_PORT:-6791}:6791"]
+    environment:
+      NEXT_PUBLIC_DEPLOYMENT_URL: http://127.0.0.1:3210
+    networks: [private]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 256m
+    pids_limit: 128
+    logging: *logging
+
+  app:
+    profiles: [application]
+    # Immutable content-addressed image ID from release.json, loaded with docker load.
+    image: ${APP_IMAGE:-think-wide-unbuilt:disabled}
+    pull_policy: never
+    init: true
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp:size=64m,mode=1777]
+    env_file: ${STATE_DIR:?set STATE_DIR}/app.env.local
+    environment:
+      NODE_ENV: production
+      THINK_WIDE_MODE: connected
+      CONVEX_SELF_HOSTED_URL: https://convex.internal:8443
+      NODE_EXTRA_CA_CERTS: /etc/think-wide/convex-root.crt
+      HOST: 0.0.0.0
+      PORT: "3000"
+    volumes:
+      - ${STATE_DIR:?set STATE_DIR}/convex-root.crt:/etc/think-wide/convex-root.crt:ro
+    networks: [private, edge]
+    depends_on:
+      backend:
+        condition: service_healthy
+      backend-tls:
+        condition: service_started
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    cpus: 1
+    mem_limit: 768m
+    pids_limit: 128
+    logging: *logging
+    healthcheck:
+      test: [CMD, node, --input-type=module, -e, "const r = await fetch('http://127.0.0.1:3000/', {redirect:'manual',signal:AbortSignal.timeout(3000)}); process.exit(r.status < 500 ? 0 : 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  ingress:
+    profiles: [public]
+    image: ${CADDY_IMAGE:?load images.env}
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    # A separate override is required to publish these ports; default has NONE.
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - public_tls:/data
+      - public_config:/config
+    networks: [edge]
+    depends_on:
+      app:
+        condition: service_healthy
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    mem_limit: 128m
+    pids_limit: 128
+    logging: *logging
+
+networks:
+  private:
+  edge:
+volumes:
+  data:
+  internal_tls:
+  internal_config:
+  public_tls:
+  public_config:
