@@ -86,4 +86,20 @@ See [`docs/REPO_MAP.md`](docs/REPO_MAP.md) for every path and the ticket that ow
 
 ## Status
 
-Initialized with the official TanStack CLI (add-ons: convex, shadcn, form, nitro, biome). `convex/todos.ts` and its schema are scaffold demo code, kept only as the local read/write smoke test until ticket T02 replaces them. No product capability is implemented yet; every acceptance case in `docs/05_SECURITY_AND_CI.md` is NOT RUN.
+As of 2026-09-20, main `672038f`. Status levels are separate and never promoted: NOT RUN → fixtures only → local real handlers → live provider/host → deployed.
+
+| Capability | Level |
+|---|---|
+| Contract + codegen (0.5.0), one operation pipeline, grants / decisions / receipts / run fencing | local real handlers |
+| Git snapshots, exact byte-range evidence with sha256, history | local real handlers |
+| Workbench, durable decisions with categories, frozen hashed implementation briefs | local real handlers |
+| Host-directed reasoning runs and fenced proposals (`beginHostRun`, `submitProposal`) | local real handlers |
+| MCP server over stdio (`bun run mcp:stdio`), seeded by `bun run local:setup` | local real handlers, verified from a real MCP client |
+| Shared demo catalog (`claimDemoAccess`, `bun run catalog:seed`) | local real handlers; not seeded on the deployed backend, and no UI calls it yet |
+| WorkOS AuthKit login with Convex accepting the session token | **deployed**: `https://think-wide.fbf.systems` (evidence on issue #26) |
+| Literal + sandboxed structural search | built and tested, not wired to an operation (`searchModes: []`) |
+| Remote MCP over HTTP with OAuth (`/api/mcp`) | NOT RUN (PR #42; needs the MCP OAuth token profile verified) |
+| Public source import (decision 0004) | design only |
+| Full-loop recording (T11) | NOT RUN |
+
+A new login on the deployed site sees an empty portfolio until the operator seeds the catalog and the app calls `claimDemoAccess`.

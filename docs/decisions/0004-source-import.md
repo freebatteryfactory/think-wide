@@ -112,6 +112,29 @@ refresh in I02. Regardless of provider, it does not replace source authorization
 trusted reading, job fencing or evidence validation. Neither Pipes nor a new
 provider dependency is installed by this decision.
 
+## Open problems the implementation ticket must resolve first
+
+Review of PR #39 found five holes. This decision is a direction, not a complete
+design, until each has an answer recorded here. Nobody implements `requestImport`
+before that.
+
+1. **Authorizing a source connection.** Decision 0002 allows exactly two grant
+   kinds (`investigation`, `snapshot`) and no snapshot exists when `requestImport`
+   runs. Say how a "source connection" is authorized and fenced without adding a
+   grant kind, or amend 0002 explicitly.
+2. **Non-local providers.** `registerSnapshotForPrincipal` rejects every project
+   whose provider is not `local-git` (`convex/lib/source_registration.ts`). A GitHub
+   import needs a reviewed registration path.
+3. **Second importer of an existing snapshot.** Snapshot ids are deterministic; a
+   second authorized user importing the same commit currently gets `not_found`
+   because they hold no owner grant. Define who receives which role.
+4. **Cache uploads larger than the public request limit.** The pipeline rejects
+   requests above 128 KiB; cached blobs can be larger. Define chunking or an
+   internal path that does not bypass validation.
+5. **Terminal state before caches finish.** Marking the job terminal at
+   registration leaves interrupted cache uploads unreclaimable. Keep the job
+   claimable until caching reports its real completeness.
+
 ## Acceptance before enabling public imports
 
 - Missing/invalid human identity cannot create a job; supplied owner, service
