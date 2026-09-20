@@ -42,6 +42,16 @@ export type DecisionCategory = ("architecture" | "security")
 export type EvidenceClass = ("observed_literal" | "observed_structural" | "observed_history" | "source_reported" | "model_hypothesis" | "human_decision" | "specialist_reported")
 export type Sha2561 = string
 /**
+ * Default full brief (bounded by the response cap), summary, or an exact UTF-8 body window. Every read reauthorizes the entire frozen brief.
+ */
+export type HandoffRead = (Handoff | HandoffSummary | HandoffBodyWindow)
+export type ReadHandoffRequest = {
+handoffId: Id
+handoffRevision?: number
+detail?: ("full" | "summary" | "body")
+byteRange?: ByteRange
+}
+/**
  * Which operation and mode this recipe covers, as written by the reviewer.
  */
 export type ShortText1 = string
@@ -70,6 +80,8 @@ Finding?: Finding
 GetCapabilitiesRequest?: GetCapabilitiesRequest
 GetRunRequest?: GetRunRequest
 Handoff?: Handoff
+HandoffRead?: HandoffRead
+HandoffSummary?: HandoffSummary
 Investigation?: Investigation
 ListProjectsRequest?: ListProjectsRequest
 OpenInvestigationRequest?: OpenInvestigationRequest
@@ -336,11 +348,15 @@ publication: Publication
 export interface HandoffTarget {
 repositoryId: Id
 baseCommit: CommitId
+hashAlgorithm: HashAlgorithm
 }
 export interface HandoffConstraint {
 statement: LongText
 decisionId: Id
-kind?: ("constraint" | "rejected_approach" | "correction")
+/**
+ * Mirrors Decision.kind (rejection is rendered as rejected_approach). Acceptance decisions are constraints on the specialist too: they say what the human already agreed to.
+ */
+kind?: ("constraint" | "rejected_approach" | "correction" | "acceptance")
 category?: DecisionCategory
 }
 export interface HandoffEvidence {
@@ -355,6 +371,29 @@ export interface Publication {
 status: ("prepared" | "exported" | "approved" | "published" | "outcome_unknown")
 issueUrl?: string
 receiptId?: Id
+}
+/**
+ * Immutable brief identity and exact UTF-8 body size. Read body windows with the pinned revision.
+ */
+export interface HandoffSummary {
+handoffId: Id
+handoffRevision: number
+investigationId: Id
+investigationRevision: Revision
+targetRepository: HandoffTarget
+audience: ("private_download" | "private_issue" | "public_issue")
+bodyHash: Sha2561
+preparedAt: TimestampMs
+bodyByteLength: number
+}
+export interface HandoffBodyWindow {
+handoffId: Id
+handoffRevision: number
+bodyHash: Sha2561
+bodyByteLength: number
+content: string
+byteRange: ByteRange
+nextRange: (null | ByteRange)
 }
 export interface Investigation {
 investigationId: Id
@@ -885,10 +924,6 @@ unknowns?: []|[ShortText]|[ShortText, ShortText]|[ShortText, ShortText, ShortTex
 }
 export interface ReadGuidanceRequest {
 recipeId?: Id
-}
-export interface ReadHandoffRequest {
-handoffId: Id
-handoffRevision?: number
 }
 export interface ReadHistoryRequest {
 snapshotId: Id

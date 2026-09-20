@@ -1,5 +1,5 @@
 {
-	"contractVersion": "0.2.1",
+	"contractVersion": "0.4.0",
 	"note": "Canonical operation registry. HTTP, MCP and any CLI dispatch through the same handler and policy. A new operation is NOT agent-exposed unless 'mcp' is listed here. Operations that return the result envelope declare envelopeKind; the operation pipeline rejects a response whose kind differs. An optional handler, '<convexModule>:<exportName>', binds an operation to the Convex function that implements it; an operation without one is unimplemented. Adapters dispatch through this binding rather than restating it.",
 	"operations": [
 		{
@@ -194,23 +194,25 @@
 			"operationId": "prepareHandoff",
 			"summary": "Freeze an implementation brief revision with body hash",
 			"request": "requests.schema.json#/$defs/PrepareHandoffRequest",
-			"response": "handoff.schema.json",
+			"response": "handoff-summary.schema.json",
 			"effect": "state",
 			"exposure": ["http", "mcp"],
 			"approval": false,
 			"profile": "required",
-			"ticket": "T09"
+			"ticket": "T09",
+			"handler": "handoffs:prepareHandoff"
 		},
 		{
 			"operationId": "readHandoff",
 			"summary": "Exact reviewed brief text plus structured references",
 			"request": "requests.schema.json#/$defs/ReadHandoffRequest",
-			"response": "handoff.schema.json",
+			"response": "handoff-read.schema.json",
 			"effect": "read",
 			"exposure": ["http", "mcp"],
 			"approval": false,
 			"profile": "required",
-			"ticket": "T09"
+			"ticket": "T09",
+			"handler": "handoffs:readHandoff"
 		}
 	],
 	"deferred": [

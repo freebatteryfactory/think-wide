@@ -43,8 +43,8 @@ const paths = (validator: v.Validator) =>
 	(validator.errors ?? []).map((e) => e.instancePath).sort();
 
 describe("contract 0.2.0: version", () => {
-	it("is 0.2.1 after additive host admission", () => {
-		expect(CONTRACT_VERSION).toBe("0.2.1");
+	it("is 0.4.0 after the ranged handoff response and additive host admission", () => {
+		expect(CONTRACT_VERSION).toBe("0.4.0");
 	});
 });
 
@@ -223,7 +223,11 @@ describe("contract 0.2.0: decision categories (decision 0003)", () => {
 		investigationId: "inv_1",
 		investigationRevision: 1,
 		objective: "Align the command contract between A and B",
-		targetRepository: { repositoryId: "repo_a", baseCommit: id40 },
+		targetRepository: {
+			repositoryId: "repo_a",
+			baseCommit: id40,
+			hashAlgorithm: "sha1",
+		},
 		constraints: [
 			{
 				statement: "never log authentication tokens",

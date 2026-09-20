@@ -12,6 +12,8 @@ export declare const Finding: Validator;
 export declare const GetCapabilitiesRequest: Validator;
 export declare const GetRunRequest: Validator;
 export declare const Handoff: Validator;
+export declare const HandoffRead: Validator;
+export declare const HandoffSummary: Validator;
 export declare const Investigation: Validator;
 export declare const ListProjectsRequest: Validator;
 export declare const OpenInvestigationRequest: Validator;

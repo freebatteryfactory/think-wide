@@ -7,7 +7,7 @@ import type {
 	ReadOperationId,
 	StateOperationId,
 } from "../../generated/operations";
-import type { Decision, Investigation, Run } from "../../generated/types";
+import type { Decision, HandoffSummary, Investigation, Run } from "../../generated/types";
 import * as validators from "../../generated/validators.js";
 import { mutation, type QueryCtx, query } from "../_generated/server";
 import {
@@ -94,10 +94,11 @@ async function authorize(
 async function reread(
 	ctx: AuthorizedCtx,
 	result: ResultId,
-): Promise<Investigation | Decision | Run> {
+): Promise<Investigation | Decision | Run | HandoffSummary> {
 	if (result.resultKind === "investigation")
 		return ctx.readInvestigation({ investigationId: result.resultId });
 	if (result.resultKind === "decision") return ctx.decision(result.resultId);
+	if (result.resultKind === "handoff") return ctx.handoffs.summary(result.resultId);
 	return ctx.run(result.resultId);
 }
 

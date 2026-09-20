@@ -1365,7 +1365,7 @@ export const MCP_TOOLS = [
 		"description": "Freeze an implementation brief revision with body hash",
 		"operationId": "prepareHandoff",
 		"effect": "state",
-		"handler": null,
+		"handler": "handoffs:prepareHandoff",
 		"inputSchema": {
 			"title": "PrepareHandoffRequest",
 			"type": "object",
@@ -1428,7 +1428,7 @@ export const MCP_TOOLS = [
 		"description": "Exact reviewed brief text plus structured references",
 		"operationId": "readHandoff",
 		"effect": "read",
-		"handler": null,
+		"handler": "handoffs:readHandoff",
 		"inputSchema": {
 			"title": "ReadHandoffRequest",
 			"type": "object",
@@ -1443,8 +1443,74 @@ export const MCP_TOOLS = [
 				"handoffRevision": {
 					"type": "integer",
 					"minimum": 1
+				},
+				"detail": {
+					"enum": [
+						"full",
+						"summary",
+						"body"
+					]
+				},
+				"byteRange": {
+					"$ref": "#/$defs/SourceRef_properties_byteRange"
 				}
 			},
+			"allOf": [
+				{
+					"if": {
+						"properties": {
+							"detail": {
+								"const": "body"
+							}
+						},
+						"required": [
+							"detail"
+						]
+					},
+					"then": {
+						"required": [
+							"handoffRevision",
+							"byteRange"
+						],
+						"properties": {
+							"handoffRevision": {
+								"type": "integer",
+								"minimum": 1
+							},
+							"byteRange": {
+								"$ref": "#/$defs/SourceRef_properties_byteRange"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"required": [
+							"byteRange"
+						],
+						"properties": {
+							"byteRange": {
+								"$ref": "#/$defs/SourceRef_properties_byteRange"
+							}
+						}
+					},
+					"then": {
+						"properties": {
+							"detail": {
+								"const": "body"
+							},
+							"handoffRevision": {
+								"type": "integer",
+								"minimum": 1
+							}
+						},
+						"required": [
+							"detail",
+							"handoffRevision"
+						]
+					}
+				}
+			],
 			"$defs": {
 				"Id": {
 					"title": "Id",
@@ -1453,6 +1519,26 @@ export const MCP_TOOLS = [
 					"minLength": 1,
 					"maxLength": 128,
 					"pattern": "^[A-Za-z0-9_:.-]+$"
+				},
+				"SourceRef_properties_byteRange": {
+					"title": "ByteRange",
+					"type": "object",
+					"additionalProperties": false,
+					"required": [
+						"start",
+						"end"
+					],
+					"properties": {
+						"start": {
+							"type": "integer",
+							"minimum": 0
+						},
+						"end": {
+							"type": "integer",
+							"minimum": 0
+						}
+					},
+					"description": "[start,end) in bytes of the blob. end MUST be >= start; handlers reject inverted ranges with invalid_request."
 				}
 			}
 		}
