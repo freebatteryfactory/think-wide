@@ -100,13 +100,8 @@ async function main() {
 	const capabilities = await dispatch("getCapabilities", {}, token);
 	if ("code" in capabilities)
 		throw new Error("Local JWT was not accepted by the backend");
-	// Convex's documented CLI --identity is an operator impersonation facility.
-	// It is used ONLY in this loopback setup script, never a public operation.
-	const identity = JSON.stringify({
-		issuer: payload.iss,
-		subject: payload.sub,
-		tokenIdentifier: `${payload.iss}|${payload.sub}`,
-	});
+	// Recipient comes from the signature-verified local token, never a CLI argument.
+	const ownerTokenIdentifier = `${payload.iss}|${payload.sub}`;
 	const existing: Project[] = [];
 	let cursor: string | undefined;
 	do {
@@ -124,15 +119,17 @@ async function main() {
 		}
 		cursor = page.nextCursor ?? undefined;
 	} while (cursor);
-	const seeded = await seedLocalFixtures(async (reference, args) => {
-		await cli("fixture ingestion", [
-			"run",
-			getFunctionName(reference),
-			JSON.stringify(convexToJson(args)),
-			"--identity",
-			identity,
-		]);
-	}, existing);
+	const seeded = await seedLocalFixtures(
+		async (reference, args) => {
+			await cli("fixture ingestion", [
+				"run",
+				getFunctionName(reference),
+				JSON.stringify(convexToJson(args)),
+			]);
+		},
+		ownerTokenIdentifier,
+		existing,
+	);
 	for (const item of seeded) {
 		console.log(
 			`${item.name}: snapshot ${item.snapshotId}; ${item.cached} blobs cached, ${item.uncached} outside the setup cache bound`,

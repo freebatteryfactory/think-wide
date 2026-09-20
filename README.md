@@ -23,21 +23,31 @@ bun run convex:dev                # pushes Convex functions and watches
 bun run dev                       # http://localhost:3000
 ```
 
-### Local headless setup (blocked on the pinned backend)
+### Local headless setup
 
-`bun run local:setup` is a **partial implementation**, not a working onboarding step.
-It configures local identity and pushes Convex, then stops during fixture ingestion:
-the pinned backend refuses an internal mutation combined with CLI `--identity`.
-See [the exact failure and evidence](docs/evidence/T08-local-setup.md). Do not use
-this command against another checkout's active backend: each checkout has its own
-local key, and configuring a different key replaces local trust.
+After configuring the local backend URL and admin credential in `.env.local`, set
+`THINK_WIDE_MODE=local-demo` there and run:
 
-The intended setup is restricted to non-production `THINK_WIDE_MODE=local-demo`
-and a literal loopback backend. It reads the operator credential from `.env.local`,
-accepts no arguments, and imports only the committed synthetic alpha/beta bundles.
-It never executes repository code. Tests exercise the existing internal ingestion
-handlers, idempotency, exact reads and grant revocation. Those tests are not a live
-setup pass. Normal MCP calls use short-lived JWTs, never the operator credential.
+```bash
+bun run local:setup
+bun run mcp:stdio
+```
+
+Setup configures the local issuer, pushes this checkout's Convex functions, and
+registers the committed synthetic alpha/beta snapshots for the local principal.
+It accepts no arguments and refuses production or non-loopback targets. The admin
+credential is used only by this operator CLI; normal MCP calls use short-lived
+user JWTs. Git reading never executes the repositories' code.
+
+Repeating setup reuses the same immutable snapshots and private signing key,
+completes interrupted cache writes, and preserves revocation. It does not reset
+the database. Do not point another checkout at an active shared backend unless
+its ignored signing key is the same: configuring a new key changes local trust.
+Restart your MCP client after upgrading so its tool list refreshes.
+
+For explicit **live** acceptance after setup (creates labeled synthetic investigation,
+decision and brief rows): `bun tests/adapter/t08-local-live.ts`.
+See [commands, evidence and limits](docs/evidence/T08-local-setup.md).
 
 Before every push: `bun run verify` (same command CI runs).
 

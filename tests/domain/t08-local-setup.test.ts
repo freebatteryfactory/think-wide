@@ -15,19 +15,39 @@ describe("local demo fixture ingestion through real handlers", () => {
 	test("replays without duplicate rows and preserves exact source and scoped grants", async () => {
 		const t = convexTest(schema, modules);
 		const owner = t.withIdentity({
-			issuer: "local-test",
+			issuer: "https://local-test.example",
 			subject: "owner",
-			tokenIdentifier: "local-test|owner",
+			tokenIdentifier: "https://local-test.example|owner",
 		});
 		const seed = async () => {
-			const existing = await owner.query(api.projects.listProjects, {
-				request: {},
-			});
+			const existing: import("../../generated/types").Project[] = [];
+			let cursor: string | undefined;
+			do {
+				const page = await owner.query(api.projects.listProjects, {
+					request: cursor ? { cursor } : {},
+				});
+				existing.push(
+					...(page.entries as import("../../generated/types").Project[]),
+				);
+				cursor = page.nextCursor ?? undefined;
+			} while (cursor);
 			return seedLocalFixtures(
-				owner.mutation.bind(owner) as Ingest,
-				existing.entries as import("../../generated/types").Project[],
+				t.mutation.bind(t) as Ingest,
+				"https://local-test.example|owner",
+				existing,
 			);
 		};
+		// Legacy T06/T08 demo grants may exist before any snapshot registration.
+		await t.run(async (ctx) => {
+			for (let i = 0; i < 10; i++)
+				await ctx.db.insert("grants", {
+					principal: "https://local-test.example|owner",
+					resourceKind: "snapshot",
+					resourceId: `000-missing-${i}`,
+					role: "owner",
+					epoch: 1,
+				});
+		});
 		const first = await seed();
 		const counts = () =>
 			t.run(async (ctx) => ({
@@ -40,11 +60,23 @@ describe("local demo fixture ingestion through real handlers", () => {
 		const before = await counts();
 		expect(await seed()).toEqual(first);
 		expect(await counts()).toEqual(before);
-		expect(before).toMatchObject({ snapshots: 2, grants: 2, history: 2 });
+		expect(before).toMatchObject({ snapshots: 2, grants: 12, history: 2 });
 		const projects = await owner.query(api.projects.listProjects, {
 			request: {},
 		});
-		expect(projects.entries).toHaveLength(2);
+		expect(projects.entries).toHaveLength(0);
+		expect(projects.scope).toEqual({ snapshotIds: [] });
+		expect(projects.nextCursor).toBeTruthy();
+		if (!projects.nextCursor) throw new Error("Expected orphan scan cursor");
+		const next = await owner.query(api.projects.listProjects, {
+			request: { cursor: projects.nextCursor },
+		});
+		expect(next.entries).toHaveLength(2);
+		await expect(
+			owner.query(api.snapshots.browseSnapshot, {
+				request: { snapshotId: "000-missing-0" },
+			}),
+		).rejects.toMatchObject({ data: { code: "not_found" } });
 		const snapshotId = first[0].snapshotId;
 		const entry = await t.run(async (ctx) =>
 			(await ctx.db.query("entries").collect()).find(

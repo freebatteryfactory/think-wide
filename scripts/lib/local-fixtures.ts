@@ -13,6 +13,7 @@ export type Ingest = <F extends FunctionReference<"mutation", "internal">>(
 /** Operator-selected committed synthetic bundles only; no target code executes. */
 export async function seedLocalFixtures(
 	ingest: Ingest,
+	ownerTokenIdentifier: string,
 	existing: readonly Project[] = [],
 ) {
 	const results = [];
@@ -41,9 +42,9 @@ export async function seedLocalFixtures(
 					},
 				],
 			};
-			await ingest(internal.snapshots.register, {
-				project,
-				entries: snapshot.entries,
+			await ingest(internal.operatorProvisioning.registerSnapshot, {
+				ownerTokenIdentifier,
+				input: { project, entries: snapshot.entries },
 			});
 			let cached = 0;
 			let uncached = 0;
@@ -55,10 +56,13 @@ export async function seedLocalFixtures(
 					uncached++;
 					continue;
 				}
-				await ingest(internal.sourceCache.put, {
-					snapshotId: snapshot.summary.snapshotId,
-					entryId: entry.entryId,
-					bytes: Uint8Array.from(await snapshot.blob(entry.entryId)).buffer,
+				await ingest(internal.operatorProvisioning.cacheSource, {
+					ownerTokenIdentifier,
+					input: {
+						snapshotId: snapshot.summary.snapshotId,
+						entryId: entry.entryId,
+						bytes: Uint8Array.from(await snapshot.blob(entry.entryId)).buffer,
+					},
 				});
 				cached++;
 			}
@@ -66,10 +70,13 @@ export async function seedLocalFixtures(
 				snapshotId: snapshot.summary.snapshotId,
 				maxCommits: 20,
 			});
-			await ingest(internal.snapshots.putHistory, {
-				snapshotId: snapshot.summary.snapshotId,
-				records: history.entries,
-				complete: !history.truncated.is,
+			await ingest(internal.operatorProvisioning.cacheHistory, {
+				ownerTokenIdentifier,
+				input: {
+					snapshotId: snapshot.summary.snapshotId,
+					records: history.entries,
+					complete: !history.truncated.is,
+				},
 			});
 			results.push({
 				name,

@@ -50,7 +50,7 @@ tests/       fixtures + acceptance cases  infra/ scripts/ docs/
 
 Each one exists because the alternative was examined and loses. Reasons are in `docs/decisions/0002-operation-pipeline.md`.
 
-1. **Identity comes only from verified auth** (`ctx.auth`). Never from a request field, header you invented, or function argument. Request schemas forbid identity fields; do not add one.
+1. **Identity comes only from verified auth** (`ctx.auth`). Never from a public request field, header you invented, or function argument. Request schemas forbid identity fields; do not add one. **Narrow operator exception (decision 0002):** internal-only administrative provisioning may name a recipient by full `tokenIdentifier` (`issuer|subject`). This is equivalent in trust to an admin database write, is never caller authentication, and must be unreachable from public/user-token surfaces. Admin credentials remain CLI-only; application code never receives them.
 2. **One operation pipeline.** Every public Convex function is registered through `convex/lib/operation.ts`: validate request → principal → receipt (state-changing ops) → handler → validate response (including `kind === envelopeKind` and each entry against the operation's `entries` schema) → finalize. Do not write a public function that bypasses it.
 3. **One door to protected data.** Handlers use `loadAuthorized` / `queryAuthorized` from `convex/lib/authz.ts`. No raw `ctx.db.get` / `ctx.db.query` on protected tables outside `convex/lib/`. A test enforces this.
 4. **Missing and forbidden are indistinguishable.** Same code (`not_found`), same message, no counts, no echoed ids. Authorize before you paginate, rank, or count.
