@@ -7,6 +7,7 @@ import type {
 	Run,
 } from "../../generated/types";
 import * as validators from "../../generated/validators.js";
+import type { Doc } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
 import { AuthorizedCtx } from "./authz";
 import { decode, fail, validate } from "./validation";
@@ -28,6 +29,22 @@ export async function publishRun(
 	const id = ctx.db.normalizeId("runs", proposal.runId);
 	const row = id && (await ctx.db.get(id));
 	if (!row) return fail("not_found", "Resource not found");
+	return publishAuthorizedRun(
+		ctx,
+		new AuthorizedCtx(ctx, { id: row.principal }, "requestAnalysis"),
+		proposal,
+		row,
+	);
+}
+
+/** Shared transactional publication primitive. Public submission supplies its
+ * verified authorized context; only the internal entry point derives a run owner. */
+export async function publishAuthorizedRun(
+	ctx: MutationCtx,
+	authorized: AuthorizedCtx,
+	proposal: Proposal,
+	row: Doc<"runs">,
+): Promise<{ published: boolean; status: Run["status"] }> {
 	const run = decode<Run>(validators.Run, row.body);
 	if (
 		proposal.investigationId !== run.investigationId ||
@@ -55,18 +72,13 @@ export async function publishRun(
 			grant.revokedAt !== undefined ||
 			may(
 				{ id: row.principal },
-				"requestAnalysis",
+				authorized.operationId,
 				{ kind: grant.resourceKind, id: grant.resourceId },
 				[grant],
 			) !== "allow"
 		)
 			return supersede();
 	}
-	const authorized = new AuthorizedCtx(
-		ctx,
-		{ id: row.principal },
-		"requestAnalysis",
-	);
 	try {
 		const parent = await authorized.loadAuthorized(
 			"investigation",
@@ -78,7 +90,9 @@ export async function publishRun(
 		);
 		if (investigation.revision !== run.baseRevision) return supersede();
 		if (proposal.composition)
-			fail("unsupported", "Composition publication belongs to T10");
+			fail("unsupported", "Composition publication is not supported");
+		if (proposal.claims.some((claim) => claim.unknowns?.length))
+			fail("unsupported", "Claim unknowns cannot yet be preserved");
 		for (const claim of proposal.claims)
 			await authorized.authorizeRefs(claim.refs, investigation);
 		// Publication must retain exactly the investigation and snapshot fence set.

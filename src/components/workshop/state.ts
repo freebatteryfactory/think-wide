@@ -53,7 +53,7 @@ export function workshopReducer(
 			return { ...state, notice: action.message };
 
 		case "dismiss-preview":
-			return { ...state, preview: null };
+			return { ...state, preview: null, notice: "" };
 
 		case "preview": {
 			const error = validateDecisionText(action.draft.text);
