@@ -184,8 +184,12 @@ no automated destructive rollback or cross-version SQLite downgrade in these scr
    protected-resource metadata. This requires connected mode and the matching
    WorkOS client ID; it does not configure an OAuth authorization server or prove
    a Claude.ai/ChatGPT connection. OAuth authorization-server integration and real
-   remote-host acceptance remain **NOT RUN**. Missing HTTP transport configuration
-   is not a website activation prerequisite. Capabilities describe evidence,
+   remote-host acceptance remain **NOT RUN**. Leave `MCP_AUTHORIZATION_SERVER`
+   empty until the real MCP OAuth token and discovery evidence establish the
+   accepted AuthKit authorization-server issuer; then set that verified HTTPS
+   issuer. Do not infer it from the browser-session token issuer or fill it merely
+   to make discovery succeed. Without the verified configuration, MCP answers
+   **503**. This does not block the authenticated website milestone. Capabilities describe evidence,
    never this checklist's intent.
 
 ### Verification and compatibility references
