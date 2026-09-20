@@ -22,7 +22,7 @@ import type {
 	OperationRequestMap,
 	OperationResponseMap,
 } from "../../generated/operations";
-import type { Project, SnapshotEntry } from "../../generated/types";
+import type { Project, SnapshotEntry, SourceRef } from "../../generated/types";
 import {
 	SnapshotEntry as validEntry,
 	Project as validProject,
@@ -472,6 +472,175 @@ describe("T11 after T09: real-source MCP to protected saved brief (transport sub
 			await readMarker(a, snapshots[0]);
 			await readMarker(b, snapshots[1]);
 			expect(await businessState(f.t)).toEqual(before);
+		} finally {
+			await f.close();
+		}
+	});
+});
+
+describe("T11 after T10: public host proposal to saved brief", () => {
+	it("Q04/Q06/Q07: fences a late proposal, publishes corrected evidence, and reopens/exports through MCP", async () => {
+		const f = await fixture();
+		try {
+			const client = await f.connect("A");
+			const investigation = await invoke(client, "openInvestigation", {
+				question:
+					"Compare alpha and beta while preserving repository-specific behavior.",
+				snapshotIds: [
+					snapshots[0].summary.snapshotId,
+					snapshots[1].summary.snapshotId,
+				],
+				requestKey: "t11-host-open",
+			});
+			const admission: OperationRequestMap["beginHostRun"] = {
+				investigationId: investigation.investigationId,
+				expectedRevision: 0,
+				purpose:
+					"Compare exact marker evidence before proposing a shared implementation",
+				requestKey: "t11-host-admission",
+			};
+			const lateRun = await invoke(client, "beginHostRun", admission);
+			expect(lateRun).toMatchObject({
+				driver: "host",
+				baseRevision: 0,
+				status: "admitted",
+			});
+			expect(await invoke(client, "beginHostRun", admission)).toEqual(lateRun);
+			const refs: [SourceRef, SourceRef] = [
+				await readMarker(client, snapshots[0]),
+				await readMarker(client, snapshots[1]),
+			];
+			// Authored deterministic proposals exercise the public API, not live reasoning.
+			const late: OperationRequestMap["submitProposal"] = {
+				proposal: {
+					investigationId: investigation.investigationId,
+					runId: lateRun.runId,
+					baseRevision: 0,
+					claims: [
+						{
+							statement: "Replace both markers with one shared implementation.",
+							evidenceClass: "model_hypothesis",
+							refs,
+						},
+					],
+				},
+				requestKey: "t11-host-late-proposal",
+			};
+			const decisionRequest: OperationRequestMap["recordDecision"] = {
+				investigationId: investigation.investigationId,
+				expectedRevision: 0,
+				kind: "correction",
+				statement: correction,
+				refs,
+				requestKey: "t11-host-correction",
+			};
+			const decision = await invoke(client, "recordDecision", decisionRequest);
+			expect(await invoke(client, "recordDecision", decisionRequest)).toEqual(
+				decision,
+			);
+			expect(
+				await invoke(client, "getRun", { runId: lateRun.runId }),
+			).toMatchObject({ status: "superseded" });
+			const beforeLate = await businessState(f.t);
+			await expect(invoke(client, "submitProposal", late)).rejects.toThrow(
+				"revision_conflict",
+			);
+			expect(await businessState(f.t)).toEqual(beforeLate);
+			// The human correction already superseded this run. Rejected public
+			// submission must leave that status and all other persisted state intact.
+			expect(
+				await invoke(client, "getRun", { runId: lateRun.runId }),
+			).toMatchObject({ status: "superseded" });
+			const corrected = await invoke(client, "readInvestigation", {
+				investigationId: investigation.investigationId,
+			});
+			expect(corrected.decisions).toEqual([decision]);
+			expect(corrected.acceptedFindings ?? []).toEqual([]);
+			const freshRun = await invoke(client, "beginHostRun", {
+				...admission,
+				expectedRevision: 1,
+				requestKey: "t11-host-corrected-admission",
+			});
+			const revisedStatement =
+				"Retain alpha and beta marker values separately; only their function shape is shared.";
+			const revised: OperationRequestMap["submitProposal"] = {
+				proposal: {
+					investigationId: investigation.investigationId,
+					runId: freshRun.runId,
+					baseRevision: 1,
+					claims: [
+						{
+							statement: revisedStatement,
+							evidenceClass: "model_hypothesis",
+							refs,
+						},
+					],
+				},
+				requestKey: "t11-host-corrected-proposal",
+			};
+			const published = await invoke(client, "submitProposal", revised);
+			expect(published.revision).toBe(1);
+			expect(published.acceptedFindings).toHaveLength(1);
+			expect(published.acceptedFindings?.[0]).toMatchObject({
+				summary: revisedStatement,
+				verification: "unverified",
+				evidenceClass: "model_hypothesis",
+				refs,
+			});
+			expect(
+				await invoke(client, "getRun", { runId: freshRun.runId }),
+			).toMatchObject({ driver: "host", status: "published", baseRevision: 1 });
+			const beforeReplay = await businessState(f.t);
+			expect(await invoke(client, "submitProposal", revised)).toEqual(
+				published,
+			);
+			await expect(
+				invoke(client, "submitProposal", {
+					...revised,
+					proposal: { ...revised.proposal, claims: late.proposal.claims },
+				}),
+			).rejects.toThrow("request_key_conflict");
+			expect(await businessState(f.t)).toEqual(beforeReplay);
+			const reopened = await f.connect("A");
+			const view = await invoke(reopened, "readInvestigation", {
+				investigationId: investigation.investigationId,
+			});
+			expect(view.revision).toBe(1);
+			expect(view.decisions).toEqual([decision]);
+			expect(view.acceptedFindings).toEqual(published.acceptedFindings);
+			expect(JSON.stringify(view)).not.toContain(
+				late.proposal.claims[0].statement,
+			);
+			const saved = await invoke(reopened, "prepareHandoff", {
+				investigationId: investigation.investigationId,
+				expectedRevision: 1,
+				targetRepositoryId: "alpha",
+				audience: "private_download",
+				requestKey: "t11-host-brief",
+			});
+			const exported = await readHandoffExport(saved, (request) =>
+				invoke(reopened, "readHandoff", request),
+			);
+			expect(
+				createHash("sha256").update(exported.bodyMarkdown).digest("hex"),
+			).toBe(saved.bodyHash);
+			expect(Buffer.byteLength(exported.bodyMarkdown)).toBe(
+				saved.bodyByteLength,
+			);
+			expect(exported.bodyMarkdown).toContain(correction);
+			expect(exported.bodyMarkdown).toContain(revisedStatement);
+			expect(exported.bodyMarkdown).not.toContain(
+				late.proposal.claims[0].statement,
+			);
+			for (const ref of refs) {
+				expect(exported.bodyMarkdown).toContain(ref.commit);
+				expect(exported.bodyMarkdown).toContain(ref.digest);
+			}
+			const final = await businessState(f.t);
+			expect(final.decisions).toHaveLength(1);
+			expect(final.handoffs).toHaveLength(1);
+			expect(final.runs).toHaveLength(2);
+			expect(final.jobs).toEqual([]);
 		} finally {
 			await f.close();
 		}

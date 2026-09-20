@@ -1,16 +1,15 @@
 # T11 preparation and capture handoff
 
-Status: **PARTIAL / prerequisites and saved-brief integration**. Current integrated
-base: `1424f5d` (T09 merge), contract **0.3.0**. [T11 draft PR #27](https://github.com/freebatteryfactory/think-wide-hackathon/pull/27).
+Status: **PARTIAL / public host-proposal and saved-brief integration**. Current integrated
+base: `76c193b` (T09, I04 and T10 merged), contract **0.4.0**. [T11 draft PR #27](https://github.com/freebatteryfactory/think-wide-hackathon/pull/27).
 Marc requested this continuation after T09 merged; the original 15:00 recording
 checkpoint was not met by this work. The seed names Andrew as T11 lead and Marc as
-capture partner. T10a is now issued as #28 to Eassa; its PR #31 is still open at this
-checkpoint. No issued T11 issue was found. Confirm writing/capture roles with Andrew.
+capture partner. T10a #28 / PR #31 is now merged; its public operations are included here. No issued T11 issue was found. Confirm writing/capture roles with Andrew.
 
 This branch is `feat/t11-integration-prep` in `/private/tmp/think-wide-t11`; only new
-integration tests and evidence are authored here. T09 was merged into this branch.
+integration tests and evidence are authored here. T09 and T10 were merged into this branch.
 The user's root checkout is now another session's `t10-reasoning` branch; it was not
-switched or edited. The local main reference was advanced to `1424f5d`.
+switched or edited. The local main reference was advanced to `76c193b`.
 
 ## What exists now
 
@@ -48,17 +47,17 @@ If Bun is missing from PATH in a temporary worktree, use the installed
 | --- | --- | --- |
 | Regression/capture ownership | Andrew + Marc | This session owns the prerequisite tests and capture kit. Andrew reviews negative cases, observes effects, and independently accepts the recording. Confirm who drives and who records. |
 | Search and coverage | Andrew, T07 #7 | Libraries exist; searchSources and readGuidance remain unbound in main. Supply merged handler SHA and real source-ref round trip, or explicitly agree a bounded browse/exact-read demonstration. Do not advertise search as connected. |
-| Analyzer isolation | Andrew | Supply Q13/structural results for the recording host. This sandbox skips 25 existing cases; no structural acceptance claimed. |
+| Analyzer isolation | Andrew | Andrew reports all 25 Q13 tests passed with bwrap on his machine in PR #32. This sandbox still skips them; retain his receipt separately and rerun on the final recording commit. |
 | Live source ingestion | Eassa T08 #21 / draft PR #29 | Concrete blocker: internal snapshots:register with CLI --identity reports function not found, while the same internal call without identity correctly rejects unauthenticated. Backend portfolio remains empty per PR #29/#31 evidence. Need a supported, reviewed operator ingestion path preserving verified identity; no auth bypass. |
 | Persistent workbench/brief | T09 #20 | **MERGED** at 1424f5d. Source UI and protected prepare/readHandoff, ranged export and acceptance ledger are present. New T11 MCP/handler integration passes; authenticated browser behavior still needs I01. |
-| Live reasoning/correction | Eassa, T10a #28 / PR #31; T10 driver session | PR #31 adds explicit host admission/proposal submission but remains unmerged. It was based on contract 0.2.1; main is now 0.3.0, so owner must reconcile generated contract/operation maps and retest after merge. Then demonstrate actual host/model reasoning and changed comparison after correction. Backend admission or deterministic test claims do not satisfy this. |
-| Browser identity | Andrew I01 #17 | Browser provider still lacks verified login. Local stdio identity is a separate mode, not browser auth. Agree the permitted capture surface before rehearsal. |
+| Live reasoning/correction | Eassa, T10a #28 / PR #31; T10 driver session | **MERGED** at 76c193b with contract 0.4.0. Public beginHostRun/submitProposal through saved-brief export now pass the T11 MCP integration. Actual host/model reasoning and changed comparison after correction remain NOT RUN; deterministic proposals do not satisfy that acceptance. |
+| Browser identity | Andrew I01 #17 | Draft PR #33 has WorkOS login wiring and issuer configuration; its receipt says Convex token acceptance and passing the user token into dispatch remain NOT RUN/incomplete. Local stdio identity is a separate mode. Agree the permitted capture surface before rehearsal. |
 | Full recording acceptance | Andrew + Marc | Same tested commit/config for source ingestion, driver, decisions and brief; actual driver events; first original recording location/hash; final brief ID/revision/hash; explicit missing capabilities. |
 
-T09 has removed the brief-persistence blocker. T10 merging alone will not unblock Q15:
+T09 and T10 have removed the brief/publication-handler blockers. Q15 is still blocked:
 a live source portfolio and real reasoning round trip are still required. A local MCP
-recording does not establish remote MCP, hosted identity or deployment. Optional VPS
-work (I04 PR #30) is separate and does not block an approved local recording.
+recording does not establish remote MCP, hosted identity or deployment. VPS infrastructure
+work (I04 PR #30, now merged) is separate and does not establish deployed T11 acceptance.
 
 ## Capture script once dependencies land
 
@@ -175,3 +174,67 @@ portfolio, authenticated save/reload, clipboard/download, live model or complete
 recording was exercised. The initial sandbox listener failed; normal Node/Vite dev
 startup with loopback permission succeeded. No backend deployment/configuration or
 fixture ingestion was performed. The temporary smoke servers were stopped after checking; no deployed app was created.
+
+
+## After T10: public proposal flow and complementary review
+
+At base `76c193b`, contract 0.4.0, the third MCP integration case exercises:
+
+1. Open a two-repository investigation and admit a host run through generated MCP tools.
+2. Browse/read both real bundle sources and check independent exact-byte identities.
+3. Save/replay a correction. The decision itself supersedes the pending run.
+4. Submit its late proposal through public submitProposal: revision_conflict; no
+   investigation, decision, receipt, run, handoff or job changes from rejection.
+5. Admit a revision-1 host run, publish an authored revised proposal, verify its
+   unverified hypothesis and exact refs, replay it, and reject changed-key payload reuse.
+6. Reopen through a new MCP client: correction and revised finding remain, rejected
+   finding is absent. Prepare/read/export the brief and verify byte length, SHA-256,
+   correction, revised finding and both source commit/digest identities.
+
+This is **local real handlers with substituted transport and fixture identities**.
+The proposals are authored test data. No real host/model, network transport, browser
+login, backend deployment or recording was exercised in this continuation.
+
+Initial validation caught two test-authoring assumptions: generated bounded arrays
+require tuple types, and recordDecision already persists superseded for the current
+run before a late submission. The test now uses generated source-ref types and checks
+that status both before and after the rejection; the unchanged-state assertion stays.
+
+### Andrew's PR #32 review
+
+Read-only code/evidence review at `ae473c1b8e5a08069ee0ad66920df9b3fd36dbf5`:
+
+- His internal publication tests complement this branch's public MCP tests. They
+  cover late publication, revoked snapshot fences, four denied owner operations,
+  unchanged business rows/jobs, and a permitted B control after revocation.
+- No concrete authorization defect found in that inspected test change. It uses
+  real handlers, but its refs are synthetic metadata and it calls internal publish;
+  neither real source bytes nor public proposal submission is established by it.
+- Follow-ups before calling the combined evidence final: replace obsolete comments
+  and blocker rows about unbound handoff/submitProposal operations; replace the
+  substring-only reopened-ref check with full source-ref equality. Our tests already
+  check full refs separately; we did not edit Andrew's branch or duplicate his file.
+- His 25/25 bwrap isolation pass is **reported by Andrew**, not rerun on this Mac.
+  Keep the disclosed earlier unidentified/non-reproducing failure visible, and rerun
+  the combined commit on the capture host before recording. No flake diagnosis claimed.
+- PR #27's manifest stays the shared template. PR #32 remains separately reviewable;
+  it was not merged into this branch. No teammate messages or review comments sent.
+
+Remaining live blockers: PR #29 ingestion; real host/model execution; PR #33 backend
+identity acceptance for a browser capture; agreed search/browse scope. The original
+recording and authenticated browser acceptance remain **NOT RUN**.
+
+Verification for the T10 continuation:
+
+- `bun x biome check --write tests/integration/t11-mcp-handoff.test.ts`: clean after formatting.
+- `bun run test -- tests/integration/t11-mcp-handoff.test.ts tests/integration/t11-source-decision.test.ts`:
+  **6 passed** after correcting the test-authoring assumptions above.
+- `bun run verify`: **exit 0; 545 passed / 25 skipped / 38 files**; frozen install,
+  generated drift, Biome, TypeScript and production build pass. Log:
+  `/tmp/think-wide-t11-after-t10-verify.log`. Existing warnings and isolation skips
+  remain; no suppression or dependency changes.
+- `git diff --check`: clean. Adversarial self-review completed: independent source
+  oracle, real policy/transaction path, generated request types, stale negative plus
+  fresh positive publication, unchanged rows/receipts/jobs on rejection and replay,
+  preserved correction and exact finding refs after reopen, export hash/length and
+  rejected-claim absence. No production changes or local CodeRabbit run.
