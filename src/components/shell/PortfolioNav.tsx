@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { AuthIndicator } from "./AuthIndicator";
 
 export function PortfolioNav() {
 	return (
@@ -12,6 +13,7 @@ export function PortfolioNav() {
 			<Link to="/workshop" className="underline underline-offset-4">
 				Component workshop
 			</Link>
+			<AuthIndicator />
 		</nav>
 	);
 }
