@@ -29,15 +29,18 @@ export class SourceAccess {
 		private readonly authorize: (snapshotId: string) => Promise<void>,
 	) {}
 
-	async snapshot(snapshotId: string) {
+	private async optionalSnapshot(snapshotId: string) {
 		await this.authorize(snapshotId);
 		const row = await this.ctx.db
 			.query("snapshots")
 			.withIndex("by_snapshot", (q) => q.eq("snapshotId", snapshotId))
 			.unique();
-		if (!row) {
-			return fail("not_found", "Resource not found");
-		}
+		return row;
+	}
+
+	async snapshot(snapshotId: string) {
+		const row = await this.optionalSnapshot(snapshotId);
+		if (!row) return fail("not_found", "Resource not found");
 		return row;
 	}
 
@@ -169,7 +172,14 @@ export class SourceAccess {
 				last = grant.resourceId;
 				continue;
 			}
-			const snapshot = await this.snapshot(grant.resourceId);
+			const snapshot = await this.optionalSnapshot(grant.resourceId);
+			// Early demo grants can predate snapshot registration. List existing
+			// resources only; dangling IDs stay out of entries and scope. The
+			// existing signed cursor still contains the caller's scan position.
+			if (!snapshot) {
+				last = grant.resourceId;
+				continue;
+			}
 			const project = decode<Project>(validators.Project, snapshot.project);
 			const existing = projects.get(project.repositoryId);
 			const combined = validate<Project>(
