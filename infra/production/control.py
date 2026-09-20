@@ -2,6 +2,7 @@
 """Private I04 preparation and cold recovery. Deliberately has no public deploy command."""
 import argparse
 import hashlib
+import http.client
 import fcntl
 import json
 import os
@@ -103,6 +104,58 @@ class Installation:
         backend = env_file(self.state / "backend.env.local")
         if set(backend) != {"INSTANCE_NAME", "INSTANCE_SECRET"} or not re.fullmatch(r"[a-f0-9]{64}", backend["INSTANCE_SECRET"]):
             raise ValueError("Invalid backend instance configuration")
+
+    def check_connected(self):
+        """Read-only activation prerequisite; never starts containers or writes env."""
+        self.check_environment()
+        app = env_file(self.state / "app.env.local")
+        required = ("WORKOS_API_KEY", "WORKOS_CLIENT_ID", "WORKOS_COOKIE_PASSWORD")
+        if any(not app.get(name, "").strip() for name in required):
+            raise ValueError("WorkOS app credentials must be configured")
+        if len(app["WORKOS_COOKIE_PASSWORD"]) < 32:
+            raise ValueError("WorkOS cookie password must contain at least 32 characters")
+        if (app.get("THINK_WIDE_IDENTITY") != "workos"
+                or app.get("WORKOS_REDIRECT_URI") != "https://think-wide.fbf.systems/api/auth/callback"):
+            raise ValueError("Connected identity and the production redirect URI are required")
+        admin = env_file(self.state / "admin.env.local")
+        # Explicit literal loopback only: no DNS, proxy environment, redirects or TLS bypass.
+        expected_url = f"http://127.0.0.1:{self.env['BACKEND_PORT']}"
+        if admin.get("CONVEX_SELF_HOSTED_URL") != expected_url:
+            raise ValueError("Admin query must target this installation's loopback listener")
+        key = admin.get("CONVEX_SELF_HOSTED_ADMIN_KEY", "")
+        if not key or any(c.isspace() for c in key):
+            raise ValueError("Missing or malformed administrative credential")
+        # Same system query as convex 1.46.0 src/cli/lib/env.ts. This CLI-only
+        # dependency must be checked when upgrading the pinned backend/Convex SDK.
+        request = json.dumps({"path": "_system/cli/queryEnvironmentVariables",
+                              "args": {}, "format": "json"})
+        connection = http.client.HTTPConnection("127.0.0.1", int(self.env["BACKEND_PORT"]), timeout=10)
+        try:
+            connection.request("POST", "/api/query", request,
+                               {"Content-Type": "application/json", "Authorization": "Convex " + key})
+            response = connection.getresponse()
+            if response.status != 200:
+                raise RuntimeError("Deployment environment query failed")
+            body = response.read(1024 * 1024 + 1)
+            if len(body) > 1024 * 1024:
+                raise RuntimeError("Deployment environment response exceeded limit")
+            result = json.loads(body)
+        finally:
+            connection.close()
+        if not isinstance(result, dict) or result.get("status") != "success" or not isinstance(result.get("value"), list):
+            raise RuntimeError("Deployment environment query returned an invalid response")
+        values = {}
+        for row in result["value"]:
+            if (not isinstance(row, dict) or not isinstance(row.get("name"), str)
+                    or not isinstance(row.get("value"), str) or row["name"] in values):
+                raise RuntimeError("Deployment environment query returned invalid variables")
+            values[row["name"]] = row["value"]
+        if (values.get("THINK_WIDE_MODE") != "connected"
+                or not values.get("WORKOS_CLIENT_ID", "").strip()
+                or values["WORKOS_CLIENT_ID"] != app["WORKOS_CLIENT_ID"]
+                or FORBIDDEN.intersection(values)):
+            raise ValueError("Deployment must use matching WorkOS identity without development authority")
+        print("Connected deployment settings verified; browser identity and public activation still require acceptance.")
 
     def bootstrap(self):
         self.initialize()
@@ -240,7 +293,7 @@ class Installation:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["initialize", "bootstrap", "backup", "restore", "check"])
+    parser.add_argument("command", choices=["initialize", "bootstrap", "backup", "restore", "check", "check-connected"])
     parser.add_argument("--root", default="/opt/think-wide")
     parser.add_argument("--project", default="think-wide-production")
     parser.add_argument("--backend-port", type=int, default=3210)
@@ -257,6 +310,8 @@ def main():
         if not args.backup:
             parser.error("restore requires --backup")
         installation.restore(args.backup)
+    elif args.command == "check-connected":
+        installation.check_connected()
     elif args.command == "check":
         installation.check_environment()
         installation.compose("config", "--quiet")
@@ -267,7 +322,7 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except (ValueError, KeyError, TypeError, RuntimeError, OSError, subprocess.CalledProcessError) as error:
+    except (ValueError, KeyError, TypeError, RuntimeError, OSError, http.client.HTTPException, subprocess.CalledProcessError) as error:
         # Never print captured provider output, environment values, or admin credentials.
         print(f"Deployment operation failed ({type(error).__name__}); inspect configuration privately.")
         raise SystemExit(1) from None

@@ -28,17 +28,34 @@ The private Caddy terminates `https://convex.internal:8443` using its own CA. Th
 mounts **only the public root certificate**, using Node's `NODE_EXTRA_CA_CERTS`;
 it cannot access the CA private key or the Convex admin/instance credentials.
 
-Issue #26's newer comment recommends public TLS Convex for T09's reactive browser
-client. **Claude owns that website/topology decision.** Private preparation neither
-rewrites the browser nor authorizes exposing Convex. A public backend would need its
-own DNS/TLS route and the same I01 authenticated/foreign-principal acceptance gates.
-The public `VITE_CONVEX_URL` is a build argument, recorded in each release manifest.
-The intended browser origin is `https://convex.think-wide.fbf.systems`; its DNS/TLS
-and I01 identity remain activation gates. Runtime environment cannot change an
-inlined Vite origin: rebuild the image. Before PR #20 includes the provider fix
-(reported local commit `80bfbf7`), leaving this value unset causes page failures.
-After that fix, an unset origin should show an unconfigured-backend notice, not
-claim a functioning connected workbench. Neither behavior proves hosted identity.
+Issue #26 and the accepted activation brief retain T09's reactive browser client:
+the reviewed public override routes `convex.think-wide.fbf.systems` to the API listener.
+Caddy 2.11.2 handles WebSocket upgrades automatically; no manual upgrade headers are
+needed. The dashboard and action listener remain loopback-only. Public Convex API
+access still depends on the existing authenticated operation pipeline; the proxy is
+not an authorization substitute. Administrative API routes on that listener remain
+protected by Convex's admin authentication; admin keys are never supplied to Caddy or
+the app. Administrative clients continue using the loopback/SSH path.
+
+The public override changes `CONVEX_CLOUD_ORIGIN` and joins ingress to the private
+network. Base Compose alone publishes no ingress ports and cannot route the public
+Convex site. Nothing in preparation loads this override or activates a listener.
+Both DNS-only hostnames and I01 browser acceptance remain activation gates.
+
+Release builds require `VITE_CONVEX_URL=https://convex.think-wide.fbf.systems` and
+`VITE_THINK_WIDE_IDENTITY=workos` (the identity default is workos). Both are baked in
+and recorded in the release manifest. Runtime environment cannot repair an image
+built without them. Rebuild from the accepted I01 commit before activation; building
+this preparation commit alone does not supply the still-separate browser identity work.
+
+Public responses include HSTS (`max-age=31536000`, deliberately no preload or
+includeSubDomains), framing/content-type protections, and an application CSP whose
+`connect-src` allows only self plus the public Convex HTTPS/WSS origins. Hosted
+WorkOS login uses top-level navigation, so it does not need a WorkOS `connect-src`
+exception. CSP currently permits inline scripts/styles because TanStack Start emits
+inline hydration and the UI uses inline styles; there is no `unsafe-eval`. A strict
+nonce policy needs support in the app's renderer and is not claimed here. Browser
+login/hydration under these headers must pass before activation.
 
 Native analyzer binaries/confinement are not supplied by this app image. T07 must
 provide a confined worker with scoped AppArmor allowance and prove it on this host.
@@ -65,7 +82,7 @@ Bootstrap is repeatable and does not reset credentials/data. Control commands ta
 per-project maintenance lock. Run them as the same administrator; do not concurrently
 run raw Compose mutations. Production defaults never trust a local-demo issuer.
 After first bootstrap, use the installed Convex CLI over an SSH tunnel to set backend
-`THINK_WIDE_MODE=connected`, then push the verified schema/functions. Keep
+`THINK_WIDE_MODE=connected` and `WORKOS_CLIENT_ID`, then push the verified schema/functions. Keep
 `THINK_WIDE_LOCAL_JWKS` and the unisolated-analyzer switch absent. This mode alone does
 not prove WorkOS works: until I01, the backend has no trusted provider.
 
@@ -83,6 +100,7 @@ use real user tokens. Never test user permissions with the admin key.
 ```sh
 # From a clean, committed checkout; performs the full repository gate itself.
 VITE_CONVEX_URL=https://convex.think-wide.fbf.systems \
+VITE_THINK_WIDE_IDENTITY=workos \
   infra/production/build-release.sh /absolute/new/private/release-directory
 # Transfer this directory over authenticated SSH, then on the VPS:
 python3 /opt/think-wide/infra/stage-release.py /absolute/upload-directory
@@ -135,17 +153,53 @@ no automated destructive rollback or cross-version SQLite downgrade in these scr
 
 ## Public activation handoff — NOT RUN
 
-- I01 WorkOS verified through the real browser and backend; missing/foreign callers denied.
-- Claude's topology decision implemented and reviewed; correct build-time browser URL.
-- Backend deployment env inspected: connected, no local JWKS or unisolated switch.
-- App entrypoint tested in production; no admin key, local identity or disabled TLS.
-- Exact verified commit/image staged; pre-change backup and restore rehearsal complete.
-- DNS-only hostname points here; Caddy security headers and certificate tested.
-- Only then consider `application` / `public` profiles and `compose.public.yml`.
-  Compose's public override is separate intentionally; preparation never loads it.
-- Remote MCP is another milestone: T08 HTTP transport plus real host OAuth and evidence.
+1. Merge and independently verify I01 through the real browser/backend; deny
+   missing/foreign callers. This infrastructure PR does not supply browser identity.
+2. Copy `app.env.template` to the protected `shared/app.env.local` (0600), filling
+   credentials privately. Never source this template as working credentials.
+   Register its exact redirect URI in the same WorkOS environment. The client ID
+   must match the one on the Convex deployment. The cookie password needs at least
+   32 characters. No provider credential is a build arg or part of the image.
+3. Set **deployment** env `THINK_WIDE_MODE=connected` and `WORKOS_CLIENT_ID` using
+   the operator CLI, then push the reviewed Convex auth/functions. Auth config needs
+   explicit mode: leaving it unset fails deployment. Remove `THINK_WIDE_LOCAL_JWKS`
+   and `THINKWIDE_ALLOW_UNISOLATED_ANALYZER`, even when their values are empty.
+4. Run `python3 /opt/think-wide/infra/control.py check-connected`. This required
+   preflight reads the actual deployed environment using the CLI-only admin file,
+   requires exact connected mode, the same nonempty WorkOS client ID as the app,
+   and absence of development authority. It makes one read-only HTTP query over
+   the exact installation loopback listener; redirects and proxies are not followed.
+   It never prints returned deployment settings or credentials. Configuration-only
+   `check` still exists for empty private bootstrap and is **not** this gate.
+5. Verify production entrypoint refusals, the exact accepted image's build flags,
+   backup/restore readiness, both DNS records, and the reviewed Caddy configuration.
+6. Only the activation owner may then load `compose.public.yml` with `application`
+   and `public` profiles, and perform external certificate, CSP, WebSocket,
+   real-login and cross-principal acceptance. There is deliberately no activation
+   command in `control.py`; manually invoking Docker can bypass a preflight, so
+   these steps are required operator gates rather than an automatic security boundary.
+7. Record the measured website result separately. Remote MCP still needs the T08
+   HTTP transport and real host OAuth acceptance. Capabilities describe evidence,
+   never this checklist's intent.
 
-`getCapabilities` must continue describing measured integrations, never deployment intent.
+### Verification and compatibility references
+
+- `python3 -m unittest discover -s infra/production -p test_control.py`: filesystem,
+  restore, and local HTTP protocol fixtures. These are infrastructure tests, not a
+  real WorkOS or deployed-backend acceptance claim.
+- `bun run verify`: full repository gate before push.
+- Validate `Caddyfile` with the exact digest in `images.env` using `caddy validate`;
+  no running production services or certificate requests are needed for validation.
+- [Caddy 2.11.2 upgrade implementation](https://github.com/caddyserver/caddy/blob/v2.11.2/modules/caddyhttp/reverseproxy/streaming.go)
+  and [header directive](https://caddyserver.com/docs/caddyfile/directives/header).
+- [Convex HTTP query API](https://docs.convex.dev/http-api/) and installed Convex
+  **1.46.0** `src/cli/lib/env.ts` / `src/browser/http_client.ts`: preflight uses the
+  same `_system/cli/queryEnvironmentVariables` query as the CLI. This administrative
+  system query is version-sensitive: recheck it on a backend/SDK upgrade. Protocol
+  fixtures and a disposable pinned local Convex backend passed (connected config
+  accepted, empty local JWKS rejected). No WorkOS token was used in this check;
+  it proves configuration inspection only. Running it on the VPS remains
+  activation-owner work.
 
 ## Host firewall and analyzer preparation
 
