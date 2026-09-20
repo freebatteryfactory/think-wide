@@ -432,7 +432,7 @@ describe("public demo catalog and private human work", () => {
 				requestKey: "manual-fence-run",
 			},
 		});
-		const stored = await t.run((ctx) => {
+		const stored = await t.run(async (ctx) => {
 			const id = ctx.db.normalizeId("runs", run.runId);
 			return id ? ctx.db.get(id) : null;
 		});

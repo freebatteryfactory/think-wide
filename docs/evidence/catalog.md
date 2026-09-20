@@ -139,3 +139,11 @@ call. Automatically claiming the catalog after website login is **not wired by
 this branch**; that UI integration remains with Claude's website/identity work.
 Arbitrary end-user URL import remains the separate B plan; this branch accepts
 pasted URLs only through the trusted operator CLI.
+
+Final follow-up gate, after merging main `672038f` and the four review fixes:
+`bun run verify` exited **0**, **50 test files / 683 tests passed**, no contract
+drift, TypeScript and production build passed. Catalog-specific coverage is now
+12 real-handler tests, 34 selection/CLI cases, and one contract test. The added
+manual-grant tests prove publication survives catalog withdrawal when admitted
+under existing manual authority, but still supersedes on that manual grant's
+epoch change or revocation. No extra hosted/OAuth/deployment acceptance is claimed.
