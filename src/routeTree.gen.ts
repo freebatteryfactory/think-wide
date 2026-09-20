@@ -11,8 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WorkshopRouteImport } from './routes/workshop'
+import { Route as DotwellKnownOauthProtectedResourceRouteImport } from './routes/[.]well-known.oauth-protected-resource'
+import { Route as ApiMcpRouteImport } from './routes/api/mcp'
 import { Route as HandoffsHandoffIdRouteImport } from './routes/handoffs.$handoffId'
 import { Route as InvestigationsInvestigationIdRouteImport } from './routes/investigations.$investigationId'
+import { Route as ApiOpsOperationIdRouteImport } from './routes/api/ops.$operationId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,6 +25,17 @@ const IndexRoute = IndexRouteImport.update({
 const WorkshopRoute = WorkshopRouteImport.update({
   id: '/workshop',
   path: '/workshop',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DotwellKnownOauthProtectedResourceRoute =
+  DotwellKnownOauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiMcpRoute = ApiMcpRouteImport.update({
+  id: '/api/mcp',
+  path: '/api/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HandoffsHandoffIdRoute = HandoffsHandoffIdRouteImport.update({
@@ -35,52 +49,78 @@ const InvestigationsInvestigationIdRoute =
     path: '/investigations/$investigationId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiOpsOperationIdRoute = ApiOpsOperationIdRouteImport.update({
+  id: '/api/ops/$operationId',
+  path: '/api/ops/$operationId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/workshop': typeof WorkshopRoute
+  '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
+  '/api/mcp': typeof ApiMcpRoute
   '/handoffs/$handoffId': typeof HandoffsHandoffIdRoute
   '/investigations/$investigationId': typeof InvestigationsInvestigationIdRoute
+  '/api/ops/$operationId': typeof ApiOpsOperationIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/workshop': typeof WorkshopRoute
+  '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
+  '/api/mcp': typeof ApiMcpRoute
   '/handoffs/$handoffId': typeof HandoffsHandoffIdRoute
   '/investigations/$investigationId': typeof InvestigationsInvestigationIdRoute
+  '/api/ops/$operationId': typeof ApiOpsOperationIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/workshop': typeof WorkshopRoute
+  '/.well-known/oauth-protected-resource': typeof DotwellKnownOauthProtectedResourceRoute
+  '/api/mcp': typeof ApiMcpRoute
   '/handoffs/$handoffId': typeof HandoffsHandoffIdRoute
   '/investigations/$investigationId': typeof InvestigationsInvestigationIdRoute
+  '/api/ops/$operationId': typeof ApiOpsOperationIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/workshop'
+    | '/.well-known/oauth-protected-resource'
+    | '/api/mcp'
     | '/handoffs/$handoffId'
     | '/investigations/$investigationId'
+    | '/api/ops/$operationId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/workshop'
+    | '/.well-known/oauth-protected-resource'
+    | '/api/mcp'
     | '/handoffs/$handoffId'
     | '/investigations/$investigationId'
+    | '/api/ops/$operationId'
   id:
     | '__root__'
     | '/'
     | '/workshop'
+    | '/.well-known/oauth-protected-resource'
+    | '/api/mcp'
     | '/handoffs/$handoffId'
     | '/investigations/$investigationId'
+    | '/api/ops/$operationId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   WorkshopRoute: typeof WorkshopRoute
+  DotwellKnownOauthProtectedResourceRoute: typeof DotwellKnownOauthProtectedResourceRoute
+  ApiMcpRoute: typeof ApiMcpRoute
   HandoffsHandoffIdRoute: typeof HandoffsHandoffIdRoute
   InvestigationsInvestigationIdRoute: typeof InvestigationsInvestigationIdRoute
+  ApiOpsOperationIdRoute: typeof ApiOpsOperationIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,6 +139,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkshopRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof DotwellKnownOauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/mcp': {
+      id: '/api/mcp'
+      path: '/api/mcp'
+      fullPath: '/api/mcp'
+      preLoaderRoute: typeof ApiMcpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/handoffs/$handoffId': {
       id: '/handoffs/$handoffId'
       path: '/handoffs/$handoffId'
@@ -113,14 +167,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InvestigationsInvestigationIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/ops/$operationId': {
+      id: '/api/ops/$operationId'
+      path: '/api/ops/$operationId'
+      fullPath: '/api/ops/$operationId'
+      preLoaderRoute: typeof ApiOpsOperationIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   WorkshopRoute: WorkshopRoute,
+  DotwellKnownOauthProtectedResourceRoute:
+    DotwellKnownOauthProtectedResourceRoute,
+  ApiMcpRoute: ApiMcpRoute,
   HandoffsHandoffIdRoute: HandoffsHandoffIdRoute,
   InvestigationsInvestigationIdRoute: InvestigationsInvestigationIdRoute,
+  ApiOpsOperationIdRoute: ApiOpsOperationIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
