@@ -1,5 +1,13 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
+import type { AddressInfo } from "node:net";
+import {
+	type Browser,
+	type BrowserContext,
+	chromium,
+	type Page,
+} from "playwright-chromium";
+import { createServer, type ViteDevServer } from "vite";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 // WCAG 2.x contrast for the colour pairs the workshop, catalog and home route really use,
 // computed from src/styles/theme.css. Change a token to a failing value and this fails.
@@ -144,6 +152,8 @@ const themes = {
 	light: tokensOf(theme, ":root"),
 	dark: tokensOf(theme, ".dark"),
 };
+const renderedThemes = ["light", "dark"] as const;
+type RenderedTheme = (typeof renderedThemes)[number];
 
 function ratio(tokens: Tokens, pair: string): number {
 	const [fg, bg] = pair.split(" | ");
@@ -188,5 +198,223 @@ describe("theme contrast (WCAG 2.x, computed from src/styles/theme.css)", () => 
 		);
 		// Dark --primary is 2.86:1 on a card. Pink text and icons use --primary-text instead.
 		expect(read("workshop.css")).not.toMatch(/[^-]color:\s*var\(--primary\)/);
+	});
+});
+
+describe("/workshop rendered theme coverage", () => {
+	let browser: Browser;
+	let server: ViteDevServer;
+	let workshopUrl: string;
+
+	beforeAll(async () => {
+		server = await createServer({
+			define: {
+				"import.meta.env.VITE_CONVEX_URL": JSON.stringify(
+					"http://127.0.0.1:3210",
+				),
+			},
+			logLevel: "silent",
+			server: { host: "127.0.0.1", port: 0 },
+		});
+		await server.listen();
+		const address = server.httpServer?.address() as AddressInfo | null;
+		if (!address) {
+			throw new Error("Vite did not expose a listening address");
+		}
+		workshopUrl = `http://127.0.0.1:${address.port}/workshop`;
+		browser = await chromium.launch({ headless: true });
+	}, 30_000);
+
+	afterAll(async () => {
+		await browser?.close();
+		await server?.close();
+	});
+
+	async function openWorkshop(
+		context: BrowserContext,
+		renderedTheme: RenderedTheme,
+	): Promise<Page> {
+		const page = await context.newPage();
+		await page.emulateMedia({ reducedMotion: "reduce" });
+		await page.goto(workshopUrl);
+		await page.getByRole("heading", { name: /Find the connection/ }).waitFor();
+
+		if (renderedTheme === "dark") {
+			const themeToggle = page.locator(".header-actions button");
+			await expect
+				.poll(
+					async () => {
+						const pressed = await themeToggle.getAttribute("aria-pressed");
+						if (pressed !== "true") {
+							await themeToggle.click();
+						}
+						return themeToggle.getAttribute("aria-pressed");
+					},
+					{ timeout: 5_000 },
+				)
+				.toBe("true");
+		}
+		await expect
+			.poll(() =>
+				page
+					.locator("html")
+					.evaluate((element) => element.classList.contains("dark")),
+			)
+			.toBe(renderedTheme === "dark");
+		return page;
+	}
+
+	it.each(
+		renderedThemes,
+	)("renders visible focus and hover states in the %s theme", async (renderedTheme) => {
+		const context = await browser.newContext();
+		try {
+			const page = await openWorkshop(context, renderedTheme);
+			const preview = page.getByRole("button", { name: /Preview decision/ });
+			await page.getByLabel("Your direction").focus();
+			await page.keyboard.press("Tab");
+			const focus = () =>
+				preview.evaluate((element) => {
+					const style = getComputedStyle(element);
+					const colourProbe = document.createElement("span");
+					colourProbe.style.color = "var(--ring)";
+					document.body.append(colourProbe);
+					const expectedColour = getComputedStyle(colourProbe).color;
+					colourProbe.remove();
+					return {
+						active: document.activeElement === element,
+						colour: style.outlineColor,
+						expectedColour,
+						offset: style.outlineOffset,
+						style: style.outlineStyle,
+						width: style.outlineWidth,
+					};
+				});
+			await expect.poll(focus).toMatchObject({
+				active: true,
+				offset: "4px",
+				style: "solid",
+				width: "2px",
+			});
+			const settledFocus = await focus();
+			expect(settledFocus.colour).toBe(settledFocus.expectedColour);
+
+			const beforeHover = await preview.evaluate(
+				(element) => getComputedStyle(element).backgroundColor,
+			);
+			await preview.hover();
+			await expect
+				.poll(() =>
+					preview.evaluate(
+						(element) => getComputedStyle(element).backgroundColor,
+					),
+				)
+				.not.toBe(beforeHover);
+		} finally {
+			await context.close();
+		}
+	});
+
+	it.each(
+		renderedThemes,
+	)("loads self-hosted fonts and preserves fallback rendering in the %s theme", async (renderedTheme) => {
+		const context = await browser.newContext();
+		try {
+			const page = await openWorkshop(context, renderedTheme);
+			await page.evaluate(() => document.fonts.ready);
+			const loaded = await page.evaluate(() => {
+				const monoElement = document.querySelector<HTMLElement>(".source-path");
+				if (!monoElement) {
+					throw new Error("The workshop did not render a source path");
+				}
+				return {
+					mono: document.fonts.check('11px "Space Mono"'),
+					monoFamily: getComputedStyle(monoElement).fontFamily,
+					sans: document.fonts.check('16px "Outfit Variable"'),
+					sansFamily: getComputedStyle(document.body).fontFamily,
+				};
+			});
+			expect(loaded.sans).toBe(true);
+			expect(loaded.mono).toBe(true);
+			expect(loaded.sansFamily).toContain("Outfit Variable");
+			expect(loaded.sansFamily).toContain("sans-serif");
+			expect(loaded.monoFamily).toContain("Space Mono");
+			expect(loaded.monoFamily).toContain("monospace");
+		} finally {
+			await context.close();
+		}
+
+		const fallbackContext = await browser.newContext();
+		await fallbackContext.route(/\.(?:woff2?|ttf)(?:\?.*)?$/, (route) =>
+			route.abort(),
+		);
+		try {
+			const fallbackPage = await openWorkshop(fallbackContext, renderedTheme);
+			await fallbackPage.evaluate(() => document.fonts.ready);
+			const fallback = await fallbackPage.evaluate(() => ({
+				bodyWidth: document.body.getBoundingClientRect().width,
+				errors: [...document.fonts].filter((font) => font.status === "error")
+					.length,
+				headingVisible:
+					document.querySelector("h1")?.getBoundingClientRect().height !== 0,
+				sansFamily: getComputedStyle(document.body).fontFamily,
+			}));
+			expect(fallback.errors).toBeGreaterThan(0);
+			expect(fallback.headingVisible).toBe(true);
+			expect(fallback.bodyWidth).toBeGreaterThan(0);
+			expect(fallback.sansFamily).toContain("sans-serif");
+		} finally {
+			await fallbackContext.close();
+		}
+	}, 30_000);
+
+	it.each(
+		renderedThemes,
+	)("uses the mobile workshop layout without horizontal overflow in the %s theme", async (renderedTheme) => {
+		const context = await browser.newContext({
+			viewport: { width: 390, height: 844 },
+		});
+		try {
+			const page = await openWorkshop(context, renderedTheme);
+			const mobile = await page.evaluate(() => {
+				const style = (selector: string) => {
+					const element = document.querySelector<HTMLElement>(selector);
+					if (!element) {
+						throw new Error(`The workshop did not render ${selector}`);
+					}
+					return getComputedStyle(element);
+				};
+				const visibleCards = [
+					...document.querySelectorAll<HTMLElement>(".source-card"),
+				];
+				return {
+					cardsFit: visibleCards.every((card) => {
+						const box = card.getBoundingClientRect();
+						return box.left >= 0 && box.right <= window.innerWidth;
+					}),
+					controlFontSize: style(".form-field textarea").fontSize,
+					evidenceColumns:
+						style(".evidence-pair").gridTemplateColumns.split(" ").length,
+					introColumns:
+						style(".workshop-intro").gridTemplateColumns.split(" ").length,
+					introNote: style(".intro-note").display,
+					noHorizontalOverflow:
+						document.documentElement.scrollWidth <=
+						document.documentElement.clientWidth,
+					toolbarDirection: style(".workshop-toolbar").flexDirection,
+				};
+			});
+			expect(mobile).toEqual({
+				cardsFit: true,
+				controlFontSize: "16px",
+				evidenceColumns: 1,
+				introColumns: 1,
+				introNote: "none",
+				noHorizontalOverflow: true,
+				toolbarDirection: "column",
+			});
+		} finally {
+			await context.close();
+		}
 	});
 });

@@ -58,6 +58,7 @@
     "@vitejs/plugin-react": "^6.0.1",
     "convex-test": "0.0.59",
     "json-schema-to-typescript": "^16.0.0",
+    "playwright-chromium": "1.63.0",
     "typescript": "^6.0.2",
     "vite": "^8.0.0",
     "vitest": "^5.0.1"
