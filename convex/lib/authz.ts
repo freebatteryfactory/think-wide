@@ -49,7 +49,13 @@ export async function requireAccess(
 				.eq("resourceId", resourceId),
 		)
 		.collect();
-	for (const grant of grants) {
+	// Prefer independent manual authority so catalog withdrawal cannot change
+	// a run fence when the same principal already has a valid manual grant.
+	for (const grant of grants.sort(
+		(a, b) =>
+			Number(a.catalogEpoch !== undefined) -
+			Number(b.catalogEpoch !== undefined),
+	)) {
 		if (
 			may(principal, action, { kind: resourceKind, id: resourceId }, [
 				grant,

@@ -1,3 +1,5 @@
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { describe, expect, test } from "vitest";
 import { catalogSelection, publicIpv4 } from "../../scripts/lib/catalog-fetch";
 
@@ -33,6 +35,8 @@ describe("trusted operator public Git selection", () => {
 		"10.0.0.1",
 		"172.16.0.1",
 		"192.168.1.1",
+		"192.88.99.1",
+		"192.88.99.2",
 		"169.254.169.254",
 		"100.64.0.1",
 		"0.0.0.0",
@@ -50,4 +54,25 @@ describe("trusted operator public Git selection", () => {
 		expect(publicIpv4(address)).toBe(false));
 	test("accepts ordinary public IPv4 addresses", () =>
 		expect(publicIpv4("140.82.112.3")).toBe(true));
+});
+
+test("catalog seed requires an explicit target environment before reading configuration", async () => {
+	await expect(
+		promisify(execFile)(
+			"bun",
+			[
+				"scripts/catalog-seed.ts",
+				"--owner",
+				"https://operator.example|owner",
+				"https://github.com/example/repo",
+			],
+			{ env: { PATH: process.env.PATH }, timeout: 5000 },
+		),
+	).rejects.toMatchObject({
+		code: 1,
+		stdout: "",
+		stderr: expect.stringMatching(
+			/^Usage: catalog:seed requires --env-file PATH/,
+		),
+	});
 });

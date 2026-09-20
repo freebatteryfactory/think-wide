@@ -117,3 +117,25 @@ still trusts only its local issuer) and repeated `bunx convex dev --once
 --env-file /tmp/think-wide-catalog-acceptance-kv5cxtxc/admin.env.local`: exit **0**,
 2.57 seconds. The complete real acceptance probe then passed again against those
 final functions. No hosted provider trust or shared-backend setting was changed.
+
+
+### Review follow-up scope
+
+The live seed/MCP acceptance above exercised code at `542327a`; later review
+fixes were verified with real-handler tests and the full gate. They reject the
+IANA special-purpose `192.88.99.0/24` block, prefer valid manual grants at run
+admission while retaining exact grant-ID/epoch fences, group multiple snapshots
+of one repository in the claim response, and require an explicit `--env-file`.
+The [IANA IPv4 special-purpose registry](https://www.iana.org/assignments/iana-ipv4-special-registry/)
+was checked for the full non-global ranges; protocol-assignment /24s remain
+conservatively excluded even where individual globally reachable exceptions exist.
+
+The coordinator removed only the disposable acceptance containers, volumes and
+temporary credentials after testing. Shared backend containers remained running.
+No further live-backend testing was performed for these narrow review fixes.
+
+The generated MCP tool and shared operation are available for a connector's first
+call. Automatically claiming the catalog after website login is **not wired by
+this branch**; that UI integration remains with Claude's website/identity work.
+Arbitrary end-user URL import remains the separate B plan; this branch accepts
+pasted URLs only through the trusted operator CLI.
