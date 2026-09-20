@@ -179,7 +179,13 @@ no automated destructive rollback or cross-version SQLite downgrade in these scr
    command in `control.py`; manually invoking Docker can bypass a preflight, so
    these steps are required operator gates rather than an automatic security boundary.
 7. Record the measured website result separately. Remote MCP still needs the T08
-   HTTP transport and real host OAuth acceptance. Capabilities describe evidence,
+   HTTP transport and real host OAuth acceptance. The app template sets
+   `MCP_RESOURCE_URL=https://think-wide.fbf.systems/api/mcp` for the transport's
+   protected-resource metadata. This requires connected mode and the matching
+   WorkOS client ID; it does not configure an OAuth authorization server or prove
+   a Claude.ai/ChatGPT connection. OAuth authorization-server integration and real
+   remote-host acceptance remain **NOT RUN**. Missing HTTP transport configuration
+   is not a website activation prerequisite. Capabilities describe evidence,
    never this checklist's intent.
 
 ### Verification and compatibility references
