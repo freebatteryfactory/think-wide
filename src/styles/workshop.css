@@ -479,6 +479,65 @@
 	margin: 20px 0;
 	line-height: 1.7;
 }
+.connect-agent {
+	min-width: 0;
+	margin: 40px 0;
+	padding: 26px;
+	background: var(--card);
+	border: 1px solid var(--border);
+	border-left: 3px solid var(--primary);
+	border-radius: var(--radius);
+}
+.connect-agent h2 {
+	font-size: 24px;
+	font-weight: 500;
+	letter-spacing: -0.03em;
+	margin: 12px 0;
+}
+.connect-agent p,
+.connect-agent-steps {
+	font-size: 13px;
+	line-height: 1.7;
+}
+.connect-agent-url {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 12px;
+	margin: 18px 0 10px;
+}
+.connect-agent-url code {
+	flex: 1 1 260px;
+	min-width: 0;
+	padding: 9px 12px;
+	background: var(--background);
+	border: 1px solid var(--input);
+	border-radius: var(--radius);
+	font-family: var(--font-mono);
+	font-size: 12px;
+	overflow-wrap: anywhere;
+}
+.connect-agent-steps {
+	list-style: decimal;
+	padding-left: 20px;
+	margin: 14px 0 18px;
+}
+.connect-agent-steps li + li {
+	margin-top: 6px;
+}
+.connect-agent-steps code {
+	font-family: var(--font-mono);
+	font-size: 12px;
+}
+.home-repositories {
+	margin: 40px 0;
+}
+/* The investigation ID form is a secondary path on the home route, so its heading is small. */
+.home-secondary h2 {
+	font-size: 15px;
+	font-weight: 600;
+	margin-bottom: 8px;
+}
 @media (max-width: 760px) {
 	/* iOS Safari zooms the page when a focused control is under 16px. */
 	.form-field select,
@@ -522,7 +581,8 @@
 	}
 	.source-card,
 	.editor-card,
-	.handoff-card {
+	.handoff-card,
+	.connect-agent {
 		padding: 20px;
 	}
 	.decision-preview {
