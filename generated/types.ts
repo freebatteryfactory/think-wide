@@ -42,6 +42,10 @@ export type DecisionCategory = ("architecture" | "security")
 export type EvidenceClass = ("observed_literal" | "observed_structural" | "observed_history" | "source_reported" | "model_hypothesis" | "human_decision" | "specialist_reported")
 export type Sha2561 = string
 /**
+ * @maxItems 8
+ */
+export type ClaimUnknowns = []|[ShortText]|[ShortText, ShortText]|[ShortText, ShortText, ShortText]|[ShortText, ShortText, ShortText, ShortText]|[ShortText, ShortText, ShortText, ShortText, ShortText]|[ShortText, ShortText, ShortText, ShortText, ShortText, ShortText]|[ShortText, ShortText, ShortText, ShortText, ShortText, ShortText, ShortText]|[ShortText, ShortText, ShortText, ShortText, ShortText, ShortText, ShortText, ShortText]
+/**
  * Default full brief (bounded by the response cap), summary, or an exact UTF-8 body window. Every read reauthorizes the entire frozen brief.
  */
 export type HandoffRead = (Handoff | HandoffSummary | HandoffBodyWindow)
@@ -293,6 +297,7 @@ summary: ShortText
 refs: [SourceRef]|[SourceRef, SourceRef]|[SourceRef, SourceRef, SourceRef]|[SourceRef, SourceRef, SourceRef, SourceRef]|[SourceRef, SourceRef, SourceRef, SourceRef, SourceRef]|[SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef]|[SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef]|[SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef]|[SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef]|[SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef]|[SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef]|[SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef]|[SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef]|[SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef]|[SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef]|[SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef]
 extractor?: Extractor
 applicabilityNotes?: LongText
+unknowns?: ClaimUnknowns
 verification: ("unverified" | "bytes_verified" | "human_confirmed" | "human_rejected")
 observedAt: TimestampMs
 }
@@ -921,10 +926,7 @@ evidenceClass: ("model_hypothesis" | "observed_literal" | "observed_structural" 
  * @maxItems 8
  */
 refs: [SourceRef]|[SourceRef, SourceRef]|[SourceRef, SourceRef, SourceRef]|[SourceRef, SourceRef, SourceRef, SourceRef]|[SourceRef, SourceRef, SourceRef, SourceRef, SourceRef]|[SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef]|[SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef]|[SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef, SourceRef]
-/**
- * @maxItems 8
- */
-unknowns?: []|[ShortText]|[ShortText, ShortText]|[ShortText, ShortText, ShortText]|[ShortText, ShortText, ShortText, ShortText]|[ShortText, ShortText, ShortText, ShortText, ShortText]|[ShortText, ShortText, ShortText, ShortText, ShortText, ShortText]|[ShortText, ShortText, ShortText, ShortText, ShortText, ShortText, ShortText]|[ShortText, ShortText, ShortText, ShortText, ShortText, ShortText, ShortText, ShortText]
+unknowns?: ClaimUnknowns
 }
 export interface ReadGuidanceRequest {
 recipeId?: Id

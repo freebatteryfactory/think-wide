@@ -83,6 +83,14 @@ export function InvestigationEvidence({
 									{finding.applicabilityNotes}
 								</p>
 							) : null}
+							{finding.unknowns?.length ? (
+								<div className="text-sm">
+									<p>Unresolved questions</p>
+									<p className="whitespace-pre-wrap break-words">
+										{finding.unknowns.join("\n\n")}
+									</p>
+								</div>
+							) : null}
 							<SourceReferences references={finding.refs} />
 						</li>
 					))}

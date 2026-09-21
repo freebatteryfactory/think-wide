@@ -43,8 +43,8 @@ const paths = (validator: v.Validator) =>
 	(validator.errors ?? []).map((e) => e.instancePath).sort();
 
 describe("contract 0.2.0: version", () => {
-	it("is 0.5.0 after shared demo catalog admission", () => {
-		expect(CONTRACT_VERSION).toBe("0.5.0");
+	it("is 0.6.0 after preserved claim unknowns", () => {
+		expect(CONTRACT_VERSION).toBe("0.6.0");
 	});
 });
 

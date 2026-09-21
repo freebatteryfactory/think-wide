@@ -180,6 +180,16 @@ export async function createHandoff(
 			investigation,
 		);
 		await auth.handoffs.verifySources(projection);
+		const uncertainties: NonNullable<Handoff["uncertainties"]> = [
+			"Suggested implementation details and file-level scope require specialist review.",
+			"Source evidence does not establish that an implementation passes tests.",
+		];
+		for (const finding of investigation.acceptedFindings ?? []) {
+			uncertainties.push(...(finding.unknowns ?? []));
+		}
+		if (uncertainties.length > 16) {
+			return fail("limit_exceeded", "All unresolved questions cannot fit in the brief; nothing was omitted");
+		}
 		const id = await raw.db.insert("handoffs", {
 			investigationId: parent._id,
 			snapshotIds: investigation.snapshotIds,
@@ -196,10 +206,7 @@ export async function createHandoff(
 					"Follow the recorded objective and human decision ledger. File-level scope is unspecified and must be confirmed before implementation.",
 				excludedChanges:
 					"No target repository execution, dependency installation, modification, deployment or issue publication by Think-Wide.",
-				uncertainties: [
-					"Suggested implementation details and file-level scope require specialist review.",
-					"Source evidence does not establish that an implementation passes tests.",
-				],
+				uncertainties,
 				acceptance: [
 					{
 						behavior:

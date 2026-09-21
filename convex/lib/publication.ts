@@ -91,8 +91,6 @@ export async function publishAuthorizedRun(
 		if (investigation.revision !== run.baseRevision) return supersede();
 		if (proposal.composition)
 			fail("unsupported", "Composition publication is not supported");
-		if (proposal.claims.some((claim) => claim.unknowns?.length))
-			fail("unsupported", "Claim unknowns cannot yet be preserved");
 		for (const claim of proposal.claims)
 			await authorized.authorizeRefs(claim.refs, investigation);
 		// Publication must retain exactly the investigation and snapshot fence set.
@@ -111,6 +109,7 @@ export async function publishAuthorizedRun(
 			summary: claim.statement,
 			evidenceClass: claim.evidenceClass,
 			refs: claim.refs,
+			...(claim.unknowns !== undefined ? { unknowns: claim.unknowns } : {}),
 			verification: "unverified",
 			observedAt: Date.now(),
 		}));

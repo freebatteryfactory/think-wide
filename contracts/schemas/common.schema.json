@@ -79,6 +79,12 @@
 			"minLength": 1,
 			"maxLength": 512
 		},
+		"ClaimUnknowns": {
+			"title": "ClaimUnknowns",
+			"type": "array",
+			"maxItems": 8,
+			"items": { "$ref": "#/$defs/ShortText" }
+		},
 		"LongText": {
 			"title": "LongText",
 			"type": "string",
