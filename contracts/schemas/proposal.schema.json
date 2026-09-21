@@ -46,11 +46,7 @@
 						}
 					},
 					"unknowns": {
-						"type": "array",
-						"maxItems": 8,
-						"items": {
-							"$ref": "common.schema.json#/$defs/ShortText"
-						}
+						"$ref": "common.schema.json#/$defs/ClaimUnknowns"
 					}
 				}
 			}

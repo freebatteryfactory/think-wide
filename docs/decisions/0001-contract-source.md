@@ -112,7 +112,7 @@ receipt replay, and publication rechecks the admitted revision and grant epochs.
 Hosts should admit before reading the evidence they reason over. An admission
 fence does not attest any earlier reads or model work.
 
-This initial slice rejects compositions and nonempty claim `unknowns` with
+This initial slice rejected compositions and nonempty claim `unknowns` with
 `unsupported`, rather than discarding data without a durable representation.
 Claim statements longer than Finding's 512-character summary limit are rejected
 with `limit_exceeded`; findings stay `unverified`. Public fence rejection throws
@@ -134,3 +134,18 @@ back the whole claim rather than silently omitting entries. There is no catalog
 pagination. A new request key sees catalog additions; receipt replay returns its
 original snapshot set and rechecks current authorization and catalog epochs.
 This operation shares immutable sources, never investigations, decisions or briefs.
+
+## Contract 0.6.0: preserve claim unknowns (#51)
+
+`Finding.unknowns` is an optional array using the same shared bounded schema as
+proposal claim `unknowns` (at most eight nonempty strings, each at most 512
+characters). Existing findings remain valid. Publication now stores this field
+instead of refusing it, and returned findings remain unverified. This supersedes
+the initial T10 refusal above; compositions remain unsupported.
+
+The workbench shows the questions as text. Brief export includes all stored
+questions in its existing uncertainties field, preserving them after a human
+decision. The brief still allows at most sixteen uncertainties including its two
+standard caveats: if all questions cannot fit, preparation fails with
+`limit_exceeded` rather than dropping any. Publication retains its existing full
+result byte limits and atomic rollback. No permissions or receipt rules change.
