@@ -4,6 +4,24 @@ Cross-repository evidence, durable human decisions, and implementation briefs fo
 
 Built during the Coffee & Code Agent hackathon, September 20, 2026. Planning material written before the build window is in [`docs/`](docs/00_START_HERE.md) and is disclosed as prior design work. Application code starts with this repository.
 
+## Connect your agent (live)
+
+Think-Wide is a remote MCP server. Any MCP host can use it directly, with no local install:
+
+```
+https://think-wide.fbf.systems/api/mcp
+```
+
+1. Add that URL as a custom connector / MCP server (ChatGPT, Claude.ai, Claude Code, Cursor, or anything that speaks Streamable HTTP with OAuth). The server publishes OAuth protected-resource metadata and supports dynamic client registration, so there is nothing to paste besides the URL.
+2. Sign in when the host opens the WorkOS page. Tokens are audience-bound to this server; a token minted for anything else is refused.
+3. Ask the agent to call `claimDemoAccess`, then `listProjects`. You get read access to a small public catalog (three pinned MIT repositories: `sindresorhus/p-limit`, `p-queue`, `p-timeout`). From there: `browseSnapshot`, `readSource` (exact bytes, commit, blob, byte range, sha256), `openInvestigation`, `beginHostRun`, `submitProposal`, `recordDecision`, `prepareHandoff`. The full tool list with schemas is generated into [`docs/OPERATIONS.md`](docs/OPERATIONS.md).
+
+What a host can and cannot do: it reads evidence and proposes findings; findings land as `unverified` and the investigation waits for a human. Only a human decision changes what is accepted, and it survives anything an agent regenerates later. The server never edits, builds or runs a repository.
+
+The same system has a web workbench at <https://think-wide.fbf.systems> (sign in, browse the same catalog, review findings, record decisions, export a brief). Today a connector sign-in and a website sign-in are **separate identities** even for the same person, so an investigation opened by an agent is not visible from the website; that link is a deliberate future decision, not an accident.
+
+Evidence for these claims, with status levels, is on issues [#26](https://github.com/freebatteryfactory/think-wide-hackathon/issues/26) and [#17](https://github.com/freebatteryfactory/think-wide-hackathon/issues/17): a real ChatGPT session completed catalog → exact evidence → cross-repository findings → human-review boundary on 2026-09-20. Claude.ai as a host: NOT RUN yet.
+
 ## The problem
 
 Builders with several repositories keep re-solving problems they already solved somewhere else, and coding agents make it worse: each agent sees one repository, starts from zero context, and forgets every correction a human gave it last time. Pasting whole repos into a prompt is slow, leaks private code, and produces confident answers with no way to check them.
@@ -95,12 +113,11 @@ As of 2026-09-20. Status levels are separate and never promoted: NOT RUN → fix
 | Workbench, durable decisions with categories, frozen hashed implementation briefs | local real handlers |
 | Host-directed reasoning runs and fenced proposals (`beginHostRun`, `submitProposal`) | local real handlers |
 | MCP server over stdio (`bun run mcp:stdio`), seeded by `bun run local:setup` | local real handlers, verified from a real MCP client |
-| Shared demo catalog (`claimDemoAccess`, `bun run catalog:seed`) | local real handlers; not seeded on the deployed backend, and no UI calls it yet |
+| Shared demo catalog (`claimDemoAccess`, `bun run catalog:seed`) | **deployed**: three pinned public repositories; the website claims it on sign-in |
 | WorkOS AuthKit login with Convex accepting the session token | **deployed**: `https://think-wide.fbf.systems` (evidence on issue #26) |
 | Literal + sandboxed structural search | built and tested, not wired to an operation (`searchModes: []`) |
-| HTTP transport (`/api/mcp`, `/api/ops/:operationId`) with separate browser and MCP OAuth token profiles | local real handlers; MCP stays unconfigured (503) until a real OAuth token is verified |
-| Remote MCP host (Claude.ai / ChatGPT) over OAuth | NOT RUN |
+| HTTP transport (`/api/mcp`, `/api/ops/:operationId`) with separate browser and MCP OAuth token profiles | **deployed**; real WorkOS tokens on both profiles, audience-bound MCP tokens |
+| Remote MCP host over OAuth | **live host**: ChatGPT completed the loop against the deployed server (owner-reported, #26); Claude.ai NOT RUN |
 | Public source import (decision 0004) | design only |
 | Full-loop recording (T11) | NOT RUN |
 
-A new login on the deployed site sees an empty portfolio until the operator seeds the catalog and the app calls `claimDemoAccess`.
