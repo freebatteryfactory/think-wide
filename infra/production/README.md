@@ -82,9 +82,10 @@ Bootstrap is repeatable and does not reset credentials/data. Control commands ta
 per-project maintenance lock. Run them as the same administrator; do not concurrently
 run raw Compose mutations. Production defaults never trust a local-demo issuer.
 After first bootstrap, use the installed Convex CLI over an SSH tunnel to set backend
-`THINK_WIDE_MODE=connected` and `WORKOS_CLIENT_ID`, then push the verified schema/functions. Keep
+`THINK_WIDE_MODE=connected`, `WORKOS_CLIENT_ID`, and `MCP_AUTHORIZATION_SERVER=''`
+(explicitly empty disables OAuth), then push the verified schema/functions. Keep
 `THINK_WIDE_LOCAL_JWKS` and the unisolated-analyzer switch absent. This mode alone does
-not prove WorkOS works: until I01, the backend has no trusted provider.
+not prove real identity acceptance; record browser and MCP results separately.
 
 ```sh
 ssh -N -L 9321:127.0.0.1:3210 think-wide-vps
@@ -161,8 +162,10 @@ no automated destructive rollback or cross-version SQLite downgrade in these scr
    must match the one on the Convex deployment. The cookie password needs at least
    32 characters. No provider credential is a build arg or part of the image.
 3. Set **deployment** env `THINK_WIDE_MODE=connected` and `WORKOS_CLIENT_ID` using
-   the operator CLI, then push the reviewed Convex auth/functions. Auth config needs
-   explicit mode: leaving it unset fails deployment. Remove `THINK_WIDE_LOCAL_JWKS`
+   the operator CLI. For a deployment without MCP OAuth enabled, explicitly set
+   `MCP_AUTHORIZATION_SERVER=''` before pushing the reviewed Convex auth/functions.
+   Auth config needs these referenced variables set: missing is not equivalent to
+   empty. Remove `THINK_WIDE_LOCAL_JWKS`
    and `THINKWIDE_ALLOW_UNISOLATED_ANALYZER`, even when their values are empty.
 4. Run `python3 /opt/think-wide/infra/control.py check-connected`. This required
    preflight reads the actual deployed environment using the CLI-only admin file,
@@ -171,6 +174,8 @@ no automated destructive rollback or cross-version SQLite downgrade in these scr
    the exact installation loopback listener; redirects and proxies are not followed.
    It never prints returned deployment settings or credentials. Configuration-only
    `check` still exists for empty private bootstrap and is **not** this gate.
+   `check-connected` checks website configuration; it does not check MCP issuer or
+   resource parity between the app and Convex.
 5. Verify production entrypoint refusals, the exact accepted image's build flags,
    backup/restore readiness, both DNS records, and the reviewed Caddy configuration.
 6. Only the activation owner may then load `compose.public.yml` with `application`
@@ -178,17 +183,21 @@ no automated destructive rollback or cross-version SQLite downgrade in these scr
    real-login and cross-principal acceptance. There is deliberately no activation
    command in `control.py`; manually invoking Docker can bypass a preflight, so
    these steps are required operator gates rather than an automatic security boundary.
-7. Record the measured website result separately. Remote MCP still needs the T08
-   HTTP transport and real host OAuth acceptance. The app template sets
+7. Record the measured website result separately. T08 HTTP transport is implemented;
+   remote MCP still needs correct-audience OAuth and real host acceptance. The app template sets
    `MCP_RESOURCE_URL=https://think-wide.fbf.systems/api/mcp` for the transport's
    protected-resource metadata. This requires connected mode and the matching
    WorkOS client ID; it does not configure an OAuth authorization server or prove
    a Claude.ai/ChatGPT connection. OAuth authorization-server integration and real
    remote-host acceptance remain **NOT RUN**. Leave `MCP_AUTHORIZATION_SERVER`
-   empty until the real MCP OAuth token and discovery evidence establish the
-   accepted AuthKit authorization-server issuer; then set that verified HTTPS
-   issuer. Do not infer it from the browser-session token issuer or fill it merely
-   to make discovery succeed. Without the verified configuration, MCP answers
+   empty until a real MCP OAuth token has the resource URL as its audience. Issue
+   #17 proves the AuthKit issuer, but the observed token has the environment client
+   ID as its audience and must remain rejected. Configure WorkOS's Resource Indicator.
+   Set the Convex `MCP_RESOURCE_URL` **before** enabling its issuer: environment
+   changes immediately re-evaluate auth config. Then configure matching values in
+   both Convex and the app. Follow the tested order in
+   [I01 MCP provider evidence](../../docs/evidence/I01-mcp-provider.md).
+   Do not substitute a client ID audience to make login succeed. Without the verified configuration, MCP answers
    **503**. This does not block the authenticated website milestone. Capabilities describe evidence,
    never this checklist's intent.
 
