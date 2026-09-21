@@ -18,7 +18,7 @@ Import rule: `convex/` and `src/server/` may import `core/` and `generated/`. `c
 ## `contracts/` hand-written public contract (T02, Eassa). See decisions/0001
 
 ```
-contracts/operations.json                   EXISTS  operationId -> request, response, envelopeKind, effect, handler(<convexModule>:<exportName>, optional), exposure(http|mcp), approval, ticket
+contracts/operations.json                   EXISTS  operationId -> request, response, envelopeKind, effect, handler(<convexModule>:<exportName>, optional), exposure(http|mcp), approval, ticket, ui(template, optional, MCP-exposed only); uiTemplates: template -> ui:// uri, title, description
 contracts/schemas/common.schema.json        EXISTS  Id, CommitId, ObjectId, Sha256, Revision, Cursor, RequestKey, EvidenceClass
 contracts/schemas/source-ref.schema.json    EXISTS  repo + full commit + blob + entryId + [start,end) bytes + digest
 contracts/schemas/evidence.schema.json      EXISTS  readSource result: exact bytes, actual range served
@@ -40,7 +40,8 @@ generated/validators.d.ts    EXISTS
 generated/operations.ts      EXISTS  OPERATIONS, OperationId, MCP_EXPOSED, CONTRACT_VERSION, OperationRequestMap, OperationResponseMap,
                                      Read/State/ExternalOperationId, OPERATION_HANDLERS, ImplementedOperationId, UNIMPLEMENTED_OPERATIONS
 generated/mcp-tools.ts       EXISTS  MCP_TOOLS (one descriptor per mcp-exposed operation: name, description, operationId, effect, handler,
-                                     self-contained inputSchema with local #/$defs refs only), MCP_TOOL_NAMES, McpToolName. Data only, no server
+                                     self-contained inputSchema with local #/$defs refs only), MCP_TOOL_NAMES, McpToolName. Data only, no server.
+                                     Bound tools carry _meta (ui.resourceUri + openai/outputTemplate); MCP_UI_RESOURCES, MCP_APP_MIME_TYPE, McpUiTemplate
 ```
 
 ## `core/` pure TypeScript rules (T06 Eassa, reviewed by Andrew)
@@ -129,7 +130,8 @@ src/server/config.ts                    T02  mode: local-demo | connected; refus
 src/server/convex-client.ts             T06  request-scoped client, no global authed client
 src/server/ops/dispatch.ts              T08  one path: validate -> authorize -> handler (HTTP + MCP + CLI)
 src/server/ops/handlers/*.ts            T05..T09  one file per operationId
-src/server/mcp/server.ts                T08
+src/server/mcp/server.ts                T08  tools + static ui:// view resources (resources/list, resources/read), all from generated tables
+src/server/mcp/apps/investigation.html  T08  read-only MCP Apps view of a readInvestigation result; self-contained, textContent only, no network
 src/server/mcp/tools.ts                 T08  built from generated/mcp-tools.ts + generated/operations.ts, explicit exposure only; restates nothing
 src/server/auth/workos.ts               I01  server identity switch (THINK_WIDE_IDENTITY); holds no credential
 src/server/auth/verify-token.ts         I01  issuer, JWKS, audience
@@ -163,6 +165,7 @@ tests/domain/contract-rejects-nested-invalid.test.ts   EXISTS  contract 0.1.0 sh
 tests/domain/contract-0.2.0.test.ts     EXISTS  hash binding, invocable search modes, decision categories
 tests/domain/decision-category.test.ts  EXISTS  #14 part 2: real recordDecision handler stores/returns category, replay, conflict, revocation
 tests/domain/operation-handlers.test.ts EXISTS  registry handler bindings name real operation.query/mutation exports, none shared, none unbound
+tests/domain/contract-ui-binding.test.ts EXISTS  contract 0.6.0: ui binding accepted; unknown template, extra properties, non-ui:// uri, non-MCP operation fail the real generator
 tests/domain/mcp-tools.test.ts          EXISTS  MCP descriptors = mcp-exposed registry rows; inputSchema self-contained on a fresh strict Ajv and agrees with generated validators
 tests/domain/t06-*.test.ts              T06  real handlers via convex-test, identities A and B
 tests/adapter/q08-catalog-composition.test.ts   EXISTS  T03  closed catalog, exact refs, size/depth limits
@@ -172,6 +175,9 @@ tests/render/theme-contrast.test.ts             EXISTS  T03  WCAG ratios for the
 tests/boundary/q10-injection.test.ts
 tests/boundary/q13-analyzer-confinement.test.ts
 tests/adapter/q14-same-policy-all-surfaces.test.ts
+tests/adapter/t08-mcp-app.test.ts       EXISTS  tools/list _meta = generated, resources/list + resources/read without a token, unknown uri -> SDK not-found
+tests/structural/t08-mcp-app-widget.test.ts EXISTS  the view has no external reference, no eval, no HTML sink, no tool call
+tests/browser/t08-mcp-app.browser.test.ts EXISTS  real Chromium under the MCP Apps default CSP: postMessage bridge + window.openai, hostile strings render as text, 320px, themes
 tests/browser/workshop.browser.test.ts  EXISTS  real Chromium via playwright-chromium; own config (vitest.browser.config.ts), `bun run test:browser`; skips loudly without a browser
 tests/e2e/q15-full-loop.test.ts         T11
 ```
