@@ -136,6 +136,143 @@ async function grant(
 }
 
 describe("T10 admitted host proposals through real handlers", () => {
+	test("preserves claim unknowns through publication, replay, decisions and frozen briefs", async () => {
+		const f = await fixture();
+		const unknowns = [
+			"Does cancellation propagate?",
+			"Unicode and punctuation: λ <script>",
+		];
+		const request = {
+			...f.request,
+			proposal: {
+				...f.proposal,
+				claims: [{ ...f.proposal.claims[0], unknowns }],
+			},
+		};
+		const result = await f.a.mutation(api.proposals.submitProposal, {
+			request,
+		});
+		expect(result.acceptedFindings?.[0]).toMatchObject({
+			unknowns,
+			verification: "unverified",
+		});
+		const after = await state(f);
+		expect(
+			await f.a.mutation(api.proposals.submitProposal, { request }),
+		).toEqual(result);
+		expect(await state(f)).toEqual(after);
+		expect(
+			await errorOf(
+				f.a.mutation(api.proposals.submitProposal, {
+					request: {
+						...request,
+						proposal: {
+							...request.proposal,
+							claims: [
+								{ ...request.proposal.claims[0], unknowns: ["Changed"] },
+							],
+						},
+					},
+				}),
+			),
+		).toMatchObject({ code: "request_key_conflict" });
+		await f.a.mutation(api.decisions.recordDecision, {
+			request: {
+				investigationId: f.investigation.investigationId,
+				expectedRevision: 0,
+				kind: "acceptance",
+				targetFindingId: result.acceptedFindings?.[0].findingId,
+				statement: "Use this evidence but retain its unknowns",
+				requestKey: "accept-with-unknowns",
+			},
+		});
+		const read = await f.a.query(api.investigations.readInvestigation, {
+			request: { investigationId: f.investigation.investigationId },
+		});
+		expect(read.acceptedFindings?.[0]?.unknowns).toEqual(unknowns);
+		const brief = await f.a.mutation(api.handoffs.prepareHandoff, {
+			request: {
+				investigationId: f.investigation.investigationId,
+				expectedRevision: 1,
+				targetRepositoryId: "alpha",
+				audience: "private_download",
+				requestKey: "brief-with-unknowns",
+			},
+		});
+		const frozen = await f.a.query(api.handoffs.readHandoff, {
+			request: { handoffId: brief.handoffId },
+		});
+		expect(frozen).toHaveProperty(
+			"uncertainties",
+			expect.arrayContaining(unknowns),
+		);
+		if (!("bodyMarkdown" in frozen)) throw new Error("Expected complete brief");
+		expect(frozen.bodyMarkdown).toContain("Does cancellation propagate?");
+		expect(
+			await errorOf(
+				f.b.query(api.investigations.readInvestigation, {
+					request: { investigationId: f.investigation.investigationId },
+				}),
+			),
+		).toEqual(forbidden);
+	});
+
+	test("does not truncate unknowns to fit a brief", async () => {
+		const f = await fixture();
+		await f.a.mutation(api.proposals.submitProposal, {
+			request: {
+				...f.request,
+				proposal: {
+					...f.proposal,
+					claims: [0, 1].map((claim) => ({
+						...f.proposal.claims[0],
+						unknowns: Array.from(
+							{ length: 8 },
+							(_, n) => `Question ${claim}:${n}`,
+						),
+					})),
+				},
+			},
+		});
+		expect(
+			await errorOf(
+				f.a.mutation(api.handoffs.prepareHandoff, {
+					request: {
+						investigationId: f.investigation.investigationId,
+						expectedRevision: 0,
+						targetRepositoryId: "alpha",
+						audience: "private_download",
+						requestKey: "too-many-unknowns",
+					},
+				}),
+			),
+		).toMatchObject({ code: "limit_exceeded" });
+		expect(await f.t.run((ctx) => ctx.db.query("handoffs").collect())).toEqual(
+			[],
+		);
+	});
+	test("oversized preserved unknowns roll back publication without dropping fields", async () => {
+		const f = await fixture();
+		const before = await state(f);
+		expect(
+			await errorOf(
+				f.a.mutation(api.proposals.submitProposal, {
+					request: {
+						...f.request,
+						proposal: {
+							...f.proposal,
+							claims: Array.from({ length: 4 }, () => ({
+								...f.proposal.claims[0],
+								unknowns: Array(8).fill("x".repeat(512)),
+							})),
+						},
+					},
+				}),
+			),
+		).toMatchObject({ code: "limit_exceeded" });
+		expect(await state(f)).toEqual(before);
+	});
+
 	test("captures admission fences, reads exact source, publishes once and retains human correction", async () => {
 		const f = await fixture();
 		expect(f.run).toMatchObject({
@@ -537,7 +674,6 @@ describe("T10 admitted host proposals through real handlers", () => {
 	});
 	test.each([
 		"composition",
-		"unknowns",
 		"long-summary",
 		"oversized",
 		"deep",
@@ -565,16 +701,6 @@ describe("T10 admitted host proposals through real handlers", () => {
 					},
 				},
 			};
-		if (kind === "unknowns")
-			request = {
-				...f.request,
-				proposal: {
-					...f.proposal,
-					claims: [
-						{ ...f.proposal.claims[0], unknowns: ["Unresolved limitation"] },
-					],
-				},
-			};
 		if (kind === "long-summary" || kind === "oversized")
 			request = {
 				...f.request,
@@ -595,7 +721,7 @@ describe("T10 admitted host proposals through real handlers", () => {
 			await errorOf(f.a.mutation(api.proposals.submitProposal, { request })),
 		).toMatchObject({
 			code:
-				kind === "composition" || kind === "unknowns"
+				kind === "composition"
 					? "unsupported"
 					: kind === "long-summary"
 						? "limit_exceeded"

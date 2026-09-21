@@ -165,7 +165,7 @@ tests/domain/contract-rejects-nested-invalid.test.ts   EXISTS  contract 0.1.0 sh
 tests/domain/contract-0.2.0.test.ts     EXISTS  hash binding, invocable search modes, decision categories
 tests/domain/decision-category.test.ts  EXISTS  #14 part 2: real recordDecision handler stores/returns category, replay, conflict, revocation
 tests/domain/operation-handlers.test.ts EXISTS  registry handler bindings name real operation.query/mutation exports, none shared, none unbound
-tests/domain/contract-ui-binding.test.ts EXISTS  contract 0.6.0: ui binding accepted; unknown template, extra properties, non-ui:// uri, non-MCP operation fail the real generator
+tests/domain/contract-ui-binding.test.ts EXISTS  contract 0.7.0: ui binding accepted; unknown template, extra properties, non-ui:// uri, non-MCP operation fail the real generator
 tests/domain/mcp-tools.test.ts          EXISTS  MCP descriptors = mcp-exposed registry rows; inputSchema self-contained on a fresh strict Ajv and agrees with generated validators
 tests/domain/t06-*.test.ts              T06  real handlers via convex-test, identities A and B
 tests/adapter/q08-catalog-composition.test.ts   EXISTS  T03  closed catalog, exact refs, size/depth limits

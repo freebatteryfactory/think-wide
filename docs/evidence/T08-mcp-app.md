@@ -58,11 +58,15 @@ Installed SDK (`@modelcontextprotocol/sdk` 1.30.0): `ListResourcesRequestSchema`
 
 ## What the view shows, and one gap
 
-Question, status (in words), revision, timestamps and ids; snapshots in scope; human decisions first, in their own visually heavier section, with the line "Human decisions outrank every finding below."; then one card per finding with claim, evidence class, verification status, extractor, and each evidence ref as repository + 12-character commit + display path (or entry id) + `[start,end)` bytes + 12-character sha256, with full values in `title` and in a "Full reference" expander. `unverified`, and any status the view does not know, gets a dashed border, a dashed badge and the word "Unverified"; it never receives the confirmed styling. A paged result shows a "Partial page" notice.
+Question, status (in words), revision, timestamps and ids; snapshots in scope; human decisions first, in their own visually heavier section, with the line "Human decisions outrank every finding below."; then one card per finding with claim, evidence class, verification status, the claim's `unknowns` (contract 0.6.0, #51), extractor, and each evidence ref as repository + 12-character commit + display path (or entry id) + `[start,end)` bytes + 12-character sha256, with full values in `title` and in a "Full reference" expander. `unverified`, and any status the view does not know, gets a dashed border, a dashed badge and the word "Unverified"; it never receives the confirmed styling. A paged result shows a "Partial page" notice.
 
 **Gap (PARTIAL):** the ticket asks for each snapshot as "repository + short commit". The `readInvestigation` response (`investigation.schema.json`) carries `snapshotIds` only. The view shows each snapshot id, and adds repository id and short commit only when an evidence ref in the same result names that snapshot. Nothing under `convex/` was changed, as instructed. Closing the gap needs a contract decision (for example snapshot summaries in the response).
 
 Everything from the tool result is untrusted: written with `textContent` and `title` only. The view has no link, image, form control, button, tool call, storage or network use; `tests/structural/t08-mcp-app-widget.test.ts` enforces that on the source.
+
+## Contract version
+
+This change is contract **0.7.0**. It was authored as 0.6.0 from base `73d3a9f`; while it was in progress `main` took 0.6.0 for "preserve claim unknowns" (#51). `origin/main` was merged into the branch, the registry moved to 0.7.0, `generated/` was regenerated from the merged contract, and the view gained the new `Finding.unknowns` field. The version pins in `tests/domain/contract-*.test.ts` (including main's new `contract-unknowns.test.ts`) were moved to 0.7.0, as every earlier bump did.
 
 ## Commands and results
 

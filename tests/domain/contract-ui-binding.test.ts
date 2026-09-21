@@ -1,4 +1,4 @@
-// Contract 0.6.0: an MCP-exposed operation may bind a read-only MCP Apps view template.
+// Contract 0.7.0: an MCP-exposed operation may bind a read-only MCP Apps view template.
 // The acceptance half reads the committed generated tables. The rejection half runs the real
 // generator on a mutated copy of the registry: an invalid binding must fail generation itself.
 import { spawnSync } from "node:child_process";
@@ -44,8 +44,8 @@ const operation = (value: Registry, id: string) => {
 };
 
 describe("accepted binding", () => {
-	test("contract is 0.6.0 and only bound operations carry ui", () => {
-		expect(CONTRACT_VERSION).toBe("0.6.0");
+	test("contract is 0.7.0 and only bound operations carry ui", () => {
+		expect(CONTRACT_VERSION).toBe("0.7.0");
 		const bound = OPERATIONS.filter((item) => "ui" in item);
 		expect(bound.map((item) => item.operationId)).toEqual([
 			"readInvestigation",

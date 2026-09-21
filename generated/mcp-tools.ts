@@ -812,6 +812,14 @@ export const MCP_TOOLS = [
 				}
 			},
 			"$defs": {
+				"ClaimUnknowns": {
+					"title": "ClaimUnknowns",
+					"type": "array",
+					"maxItems": 8,
+					"items": {
+						"$ref": "#/$defs/ShortText"
+					}
+				},
 				"CommitId": {
 					"title": "CommitId",
 					"description": "Full Git object id, never a branch name.",
@@ -1068,11 +1076,7 @@ export const MCP_TOOLS = [
 										}
 									},
 									"unknowns": {
-										"type": "array",
-										"maxItems": 8,
-										"items": {
-											"$ref": "#/$defs/ShortText"
-										}
+										"$ref": "#/$defs/ClaimUnknowns"
 									}
 								}
 							}

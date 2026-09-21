@@ -14,10 +14,11 @@ export function InvestigationAccess({
 	const [error, setError] = useState("");
 	return (
 		<section className="editor-card" aria-labelledby={`${id}-heading`}>
-			<h2 id={`${id}-heading`}>Reopen an investigation</h2>
+			<h2 id={`${id}-heading`}>Already have an investigation ID?</h2>
 			<p>
-				Return to its saved decisions using an investigation ID. Access is
-				checked when it opens.
+				Paste it here to return to that investigation and its saved decisions.
+				The ID is the last part of an investigation's address. Access is checked
+				when it opens.
 			</p>
 			<form
 				className="space-y-4"

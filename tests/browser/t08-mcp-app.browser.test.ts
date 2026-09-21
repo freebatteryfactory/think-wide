@@ -53,6 +53,10 @@ const investigation: Investigation = {
 			summary: HOSTILE_CLAIM,
 			refs: [ref],
 			extractor: { kind: "model", modelId: "host-model" },
+			unknowns: [
+				"Is the retry budget shared across tenants?",
+				'<svg onload="window.__pwned=1">',
+			],
 			verification: "unverified",
 			observedAt: 1_760_000_100_000,
 		},
@@ -320,6 +324,13 @@ describe.skipIf(!available)("investigation view in a real browser", () => {
 			});
 			expect(unverified.background).not.toBe(confirmed.background);
 			expect(await cards.nth(0).textContent()).toContain("Model hypothesis");
+			// What the claim does not establish travels with the claim, as text.
+			expect(
+				await cards.nth(0).locator("ul.unknowns > li").allTextContents(),
+			).toEqual(investigation.acceptedFindings?.[0]?.unknowns);
+			expect(await cards.nth(0).textContent()).toContain("Unknowns (2)");
+			expect(await cards.nth(1).locator("ul.unknowns").count()).toBe(0);
+			expect(await frame.locator("svg").count()).toBe(0);
 
 			// Exact evidence: short forms on the line, full values in title and in the expander.
 			const line = cards.nth(0).locator(".refline").first();

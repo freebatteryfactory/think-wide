@@ -25,7 +25,9 @@ if value:
             or any(c.isspace() for c in value)):
         raise SystemExit('VITE_CONVEX_URL must be a public HTTPS origin without credentials')
 VALIDATE
-bun run verify
+# The gate judges the code, not this release's browser settings: tests assume a neutral
+# environment, and the image build below receives both values as explicit build args.
+env -u VITE_CONVEX_URL -u VITE_THINK_WIDE_IDENTITY bun run verify
 mkdir -m 700 -p "$release_output"
 # This file contains reviewed public image references only, never credentials.
 source infra/production/images.env

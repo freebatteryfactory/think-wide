@@ -1,5 +1,5 @@
 {
-	"contractVersion": "0.6.0",
+	"contractVersion": "0.7.0",
 	"note": "Canonical operation registry. HTTP, MCP and any CLI dispatch through the same handler and policy. A new operation is NOT agent-exposed unless 'mcp' is listed here. Operations that return the result envelope declare envelopeKind; the operation pipeline rejects a response whose kind differs. An optional handler, '<convexModule>:<exportName>', binds an operation to the Convex function that implements it; an operation without one is unimplemented. Adapters dispatch through this binding rather than restating it. uiTemplates declares the static, read-only MCP Apps views (ui:// resources) the MCP adapter serves; an MCP-exposed operation may bind one with ui.template, and codegen emits the tool _meta and the resource descriptors. A template is presentation only: it carries no data and no authority, and every value it shows arrives through the authorized tool call.",
 	"uiTemplates": {
 		"investigation": {

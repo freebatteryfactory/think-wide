@@ -200,6 +200,11 @@
 				white-space: pre-wrap;
 				margin-top: 4px;
 			}
+			ul.unknowns {
+				list-style: disc;
+				padding-left: 18px;
+				white-space: pre-wrap;
+			}
 			.refs {
 				margin-top: 8px;
 			}
@@ -455,7 +460,17 @@
 					if (str(finding.applicabilityNotes)) {
 						add(item, el("p", "statement", str(finding.applicabilityNotes)));
 					}
-					const extractor = isObject(finding.extractor) ? finding.extractor : {};
+					// What the claim does not establish (contract 0.6.0). Shown with the claim, never hidden.
+				const unknowns = list(finding.unknowns);
+				if (unknowns.length) {
+					add(item, el("p", "eyebrow", `Unknowns (${unknowns.length})`));
+					const unknownList = el("ul", "unknowns");
+					for (const unknown of unknowns) {
+						add(unknownList, el("li", "", str(unknown) || "Unreadable entry."));
+					}
+					add(item, unknownList);
+				}
+				const extractor = isObject(finding.extractor) ? finding.extractor : {};
 					const meta = el("div", "meta");
 					add(
 						meta,
