@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Think-Wide investigation</title>
+		<!--
+			Read-only MCP Apps view of a readInvestigation result (SEP-1865; ChatGPT renders the same
+			resource). One self-contained document: no external script, style, font, image or request.
+			Every value from the tool result is untrusted data and is written with textContent only.
+		-->
+		<style>
+			:root {
+				color-scheme: light dark;
+				--bg: #ffffff;
+				--card: #f7f7f7;
+				--text: #1a1a1a;
+				--muted: #525252;
+				--border: #c9c9c9;
+				--decision-bg: #eef0ff;
+				--decision-edge: #2f3a9e;
+				--decision-text: #1d2470;
+				--unverified-bg: #fff4dc;
+				--unverified-text: #6b3f00;
+				--verified-bg: #e8f1ff;
+				--verified-text: #0b3f7a;
+				--confirmed-bg: #e6f5ea;
+				--confirmed-text: #14532d;
+				--rejected-bg: #fdeaea;
+				--rejected-text: #7f1d1d;
+			}
+			@media (prefers-color-scheme: dark) {
+				:root:not([data-theme="light"]) {
+					--bg: #171717;
+					--card: #212121;
+					--text: #f5f5f5;
+					--muted: #b8b8b8;
+					--border: #4a4a4a;
+					--decision-bg: #1d2147;
+					--decision-edge: #a9b2ff;
+					--decision-text: #d5d9ff;
+					--unverified-bg: #3a2a08;
+					--unverified-text: #ffd48a;
+					--verified-bg: #0f2742;
+					--verified-text: #b3d3ff;
+					--confirmed-bg: #10301c;
+					--confirmed-text: #a7e3b9;
+					--rejected-bg: #3b1414;
+					--rejected-text: #ffb8b8;
+				}
+			}
+			:root[data-theme="dark"] {
+				--bg: #171717;
+				--card: #212121;
+				--text: #f5f5f5;
+				--muted: #b8b8b8;
+				--border: #4a4a4a;
+				--decision-bg: #1d2147;
+				--decision-edge: #a9b2ff;
+				--decision-text: #d5d9ff;
+				--unverified-bg: #3a2a08;
+				--unverified-text: #ffd48a;
+				--verified-bg: #0f2742;
+				--verified-text: #b3d3ff;
+				--confirmed-bg: #10301c;
+				--confirmed-text: #a7e3b9;
+				--rejected-bg: #3b1414;
+				--rejected-text: #ffb8b8;
+			}
+			* {
+				box-sizing: border-box;
+			}
+			html,
+			body {
+				margin: 0;
+				padding: 0;
+				background: var(--bg);
+				color: var(--text);
+			}
+			body {
+				font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+				padding: 12px;
+				overflow-wrap: anywhere;
+				word-break: break-word;
+			}
+			main {
+				max-width: 760px;
+				margin: 0 auto;
+				min-width: 0;
+			}
+			h1,
+			h2,
+			h3,
+			p,
+			ul,
+			ol,
+			dl,
+			dd {
+				margin: 0;
+				padding: 0;
+			}
+			ul,
+			ol {
+				list-style: none;
+			}
+			h1 {
+				font-size: 17px;
+				line-height: 1.35;
+				white-space: pre-wrap;
+			}
+			h2 {
+				font-size: 14px;
+				margin: 18px 0 8px;
+			}
+			h3 {
+				font-size: 14px;
+				font-weight: 600;
+				white-space: pre-wrap;
+			}
+			.eyebrow,
+			.meta,
+			.empty,
+			.note {
+				color: var(--muted);
+				font-size: 12px;
+			}
+			.meta {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 4px 12px;
+				margin-top: 6px;
+			}
+			.meta strong {
+				color: var(--text);
+				font-weight: 600;
+			}
+			.mono {
+				font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+				font-size: 12px;
+			}
+			.card {
+				background: var(--card);
+				border: 1px solid var(--border);
+				border-radius: 8px;
+				padding: 10px 12px;
+				margin-top: 8px;
+				min-width: 0;
+			}
+			.card.decision {
+				background: var(--decision-bg);
+				border: 2px solid var(--decision-edge);
+				border-left-width: 6px;
+				color: var(--decision-text);
+			}
+			.card.decision .eyebrow,
+			.card.decision .meta {
+				color: var(--decision-text);
+			}
+			.card.unverified {
+				border-style: dashed;
+				border-width: 2px;
+			}
+			.badges {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 6px;
+				margin: 6px 0 2px;
+			}
+			.badge {
+				border: 1px solid currentColor;
+				border-radius: 999px;
+				padding: 1px 8px;
+				font-size: 12px;
+				font-weight: 600;
+				color: var(--muted);
+				background: transparent;
+			}
+			.badge.v-unverified {
+				color: var(--unverified-text);
+				background: var(--unverified-bg);
+				border-style: dashed;
+			}
+			.badge.v-bytes_verified {
+				color: var(--verified-text);
+				background: var(--verified-bg);
+			}
+			.badge.v-human_confirmed {
+				color: var(--confirmed-text);
+				background: var(--confirmed-bg);
+			}
+			.badge.v-human_rejected {
+				color: var(--rejected-text);
+				background: var(--rejected-bg);
+			}
+			.badge.k-decision {
+				color: var(--decision-text);
+				background: transparent;
+			}
+			.statement {
+				white-space: pre-wrap;
+				margin-top: 4px;
+			}
+			.refs {
+				margin-top: 8px;
+			}
+			.refs > li {
+				border-top: 1px solid var(--border);
+				padding: 6px 0 2px;
+			}
+			.refline {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 2px 10px;
+			}
+			details {
+				margin-top: 4px;
+			}
+			summary {
+				cursor: pointer;
+				color: var(--muted);
+				font-size: 12px;
+			}
+			summary:focus-visible {
+				outline: 2px solid var(--decision-edge);
+				outline-offset: 2px;
+			}
+			dl.full {
+				display: grid;
+				grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
+				gap: 2px 10px;
+				margin-top: 4px;
+				font-size: 12px;
+			}
+			dl.full dt {
+				color: var(--muted);
+			}
+			.error {
+				border: 2px solid var(--rejected-text);
+				background: var(--rejected-bg);
+				color: var(--rejected-text);
+			}
+			@media (max-width: 360px) {
+				body {
+					padding: 8px;
+				}
+				dl.full {
+					grid-template-columns: minmax(0, 1fr);
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<main id="app">
+			<p id="state" class="empty" role="status">Waiting for the investigation result.</p>
+		</main>
+		<script>
+			(() => {
+				"use strict";
+
+				const PROTOCOL_VERSION = "2026-01-26";
+				const app = document.getElementById("app");
+
+				const STATUS_LABEL = {
+					open: "Open",
+					awaiting_human: "Awaiting a human decision",
+					closed: "Closed",
+					source_unavailable: "Source unavailable",
+				};
+				const VERIFICATION = {
+					unverified: { label: "Unverified", glyph: "?" },
+					bytes_verified: { label: "Bytes verified", glyph: "#" },
+					human_confirmed: { label: "Confirmed by a human", glyph: "✓" },
+					human_rejected: { label: "Rejected by a human", glyph: "✕" },
+				};
+				const EVIDENCE_LABEL = {
+					observed_literal: "Observed: literal match",
+					observed_structural: "Observed: structural match",
+					observed_history: "Observed: Git history",
+					source_reported: "Reported by the source",
+					model_hypothesis: "Model hypothesis",
+					human_decision: "Human decision",
+					specialist_reported: "Reported by a specialist",
+				};
+				const DECISION_LABEL = {
+					correction: "Correction",
+					constraint: "Constraint",
+					rejection: "Rejection",
+					acceptance: "Acceptance",
+				};
+
+				// ---- untrusted-data helpers: strings stay strings, everything else is dropped ----
+				function isObject(value) {
+					return typeof value === "object" && value !== null && !Array.isArray(value);
+				}
+				function own(map, key) {
+					return Object.hasOwn(map, key) ? map[key] : undefined;
+				}
+				function str(value) {
+					return typeof value === "string" ? value : "";
+				}
+				function list(value) {
+					return Array.isArray(value) ? value : [];
+				}
+				function int(value) {
+					return typeof value === "number" && Number.isFinite(value) ? String(value) : "";
+				}
+				function when(value) {
+					if (typeof value !== "number" || !Number.isFinite(value)) { return ""; }
+					const date = new Date(value);
+					return Number.isNaN(date.getTime()) ? "" : date.toISOString();
+				}
+				function short(value, length) {
+					return value.length > length ? value.slice(0, length) : value;
+				}
+				function labelOf(map, value) {
+					const known = own(map, value);
+					return typeof known === "string" ? known : value;
+				}
+
+				// ---- DOM helpers: text only ----
+				function el(tag, className, text) {
+					const node = document.createElement(tag);
+					if (className) { node.className = className; }
+					if (text !== undefined) { node.textContent = text; }
+					return node;
+				}
+				function add(parent, ...children) {
+					for (const child of children) {
+						if (child) {
+							parent.appendChild(child);
+						}
+					}
+					return parent;
+				}
+				function metaItem(label, value, mono) {
+					if (!value) { return null; }
+					const item = el("span");
+					add(item, el("span", "", `${label} `), el("strong", mono ? "mono" : "", value));
+					return item;
+				}
+				function fullRow(dl, label, value) {
+					if (!value) { return; }
+					add(dl, el("dt", "", label), el("dd", "mono", value));
+				}
+
+				function renderRef(ref) {
+					const item = el("li");
+					if (!isObject(ref)) {
+						add(item, el("span", "note", "Unreadable evidence reference."));
+						return item;
+					}
+					const repository = str(ref.repositoryId);
+					const commit = str(ref.commit);
+					const path = str(ref.displayPath);
+					const entry = str(ref.entryId);
+					const digest = str(ref.digest);
+					const range = isObject(ref.byteRange) ? ref.byteRange : {};
+					const bytes = `[${int(range.start)},${int(range.end)})`;
+					const lines = isObject(ref.lineRange)
+						? `${int(ref.lineRange.start)}-${int(ref.lineRange.end)}`
+						: "";
+
+					const line = el("div", "refline mono");
+					const repositoryNode = el("span", "", repository || "unknown repository");
+					const commitNode = el("span", "", `@${short(commit, 12)}`);
+					commitNode.title = commit;
+					const whereNode = el("span", "", path || `entry ${entry}`);
+					whereNode.title = `entry ${entry}`;
+					const bytesNode = el("span", "", `bytes ${bytes}`);
+					const digestNode = el("span", "", `sha256:${short(digest, 12)}`);
+					digestNode.title = digest;
+					add(line, repositoryNode, commitNode, whereNode, bytesNode, digestNode);
+
+					const details = el("details");
+					add(details, el("summary", "", "Full reference"));
+					const dl = el("dl", "full");
+					fullRow(dl, "Repository", repository);
+					fullRow(dl, "Snapshot", str(ref.snapshotId));
+					fullRow(dl, "Commit", commit);
+					fullRow(dl, "Hash algorithm", str(ref.hashAlgorithm));
+					fullRow(dl, "Blob", str(ref.blobId));
+					fullRow(dl, "Entry", entry);
+					fullRow(dl, "Path (display only)", path);
+					fullRow(dl, "Bytes [start,end)", bytes);
+					fullRow(dl, "Lines (display only)", lines);
+					fullRow(dl, "sha256 of those bytes", digest);
+					add(details, dl);
+					return add(item, line, details);
+				}
+
+				function renderRefs(refs, heading) {
+					const values = list(refs);
+					if (!values.length) { return null; }
+					const wrap = el("div");
+					add(wrap, el("p", "eyebrow", `${heading} (${values.length})`));
+					const ul = el("ul", "refs");
+					for (let i = 0; i < values.length; i++) { add(ul, renderRef(values[i])); }
+					return add(wrap, ul);
+				}
+
+				function renderDecision(decision) {
+					const item = el("li", "card decision");
+					if (!isObject(decision)) {
+						add(item, el("p", "note", "Unreadable decision."));
+						return item;
+					}
+					const kind = str(decision.kind);
+					add(item, el("p", "eyebrow", "Human decision"));
+					const badges = el("div", "badges");
+					add(badges, el("span", "badge k-decision", labelOf(DECISION_LABEL, kind)));
+					if (str(decision.category)) {
+						add(badges, el("span", "badge k-decision", `Category: ${str(decision.category)}`));
+					}
+					add(item, badges, el("h3", "statement", str(decision.statement)));
+					const meta = el("div", "meta");
+					add(
+						meta,
+						metaItem(
+							"Revision",
+							`${int(decision.madeAtRevision)} → ${int(decision.resultingRevision)}`,
+						),
+						metaItem("About finding", str(decision.targetFindingId), true),
+						metaItem("Recorded", when(decision.createdAt)),
+						metaItem("Decision", str(decision.decisionId), true),
+					);
+					return add(item, meta, renderRefs(decision.refs, "Evidence cited"));
+				}
+
+				function renderFinding(finding) {
+					const item = el("li", "card");
+					if (!isObject(finding)) {
+						add(item, el("p", "note", "Unreadable finding."));
+						return item;
+					}
+					const verification = str(finding.verification);
+					const known = own(VERIFICATION, verification);
+					// Only a known, positive status gets its own styling. Anything else reads as unverified.
+					if (!known || verification === "unverified") { item.className = "card unverified"; }
+					add(item, el("h3", "", str(finding.summary)));
+					const badges = el("div", "badges");
+					const badge = el("span", `badge ${known ? `v-${verification}` : "v-unverified"}`);
+					const glyph = el("span", "", `${known ? known.glyph : "?"} `);
+					glyph.setAttribute("aria-hidden", "true");
+					add(
+						badge,
+						glyph,
+						el("span", "", known ? known.label : `Unverified (status: ${verification})`),
+					);
+					add(
+						badges,
+						badge,
+						el("span", "badge", labelOf(EVIDENCE_LABEL, str(finding.evidenceClass))),
+					);
+					add(item, badges);
+					if (str(finding.applicabilityNotes)) {
+						add(item, el("p", "statement", str(finding.applicabilityNotes)));
+					}
+					const extractor = isObject(finding.extractor) ? finding.extractor : {};
+					const meta = el("div", "meta");
+					add(
+						meta,
+						metaItem("Extractor", str(extractor.kind)),
+						metaItem("Version", str(extractor.version), true),
+						metaItem("Model", str(extractor.modelId), true),
+						metaItem("Observed", when(finding.observedAt)),
+						metaItem("Finding", str(finding.findingId), true),
+					);
+					return add(item, meta, renderRefs(finding.refs, "Evidence"));
+				}
+
+				function renderSnapshots(data) {
+					// The result carries snapshot ids only. Repository and commit are shown for a snapshot
+					// when an evidence reference in this same result names it; nothing is inferred.
+					const seen = {};
+					const sources = list(data.acceptedFindings).concat(list(data.decisions));
+					for (let i = 0; i < sources.length; i++) {
+						const refs = isObject(sources[i]) ? list(sources[i].refs) : [];
+						for (let j = 0; j < refs.length; j++) {
+							const ref = refs[j];
+							if (!isObject(ref) || !str(ref.snapshotId)) { continue; }
+							const key = `s:${str(ref.snapshotId)}`;
+							if (!own(seen, key)) {
+								seen[key] = { repository: str(ref.repositoryId), commit: str(ref.commit) };
+							}
+						}
+					}
+					const ids = list(data.snapshotIds);
+					const ul = el("ul");
+					for (let k = 0; k < ids.length; k++) {
+						const id = str(ids[k]);
+						const item = el("li", "refline mono");
+						add(item, el("span", "", id || "unreadable snapshot id"));
+						const info = own(seen, `s:${id}`);
+						if (info) {
+							const commitNode = el("span", "", `@${short(info.commit, 12)}`);
+							commitNode.title = info.commit;
+							add(item, el("span", "", info.repository), commitNode);
+						}
+						add(ul, item);
+					}
+					return ul;
+				}
+
+				function renderInvestigation(data) {
+					const root = document.createDocumentFragment();
+					const header = el("header");
+					add(header, el("p", "eyebrow", "Think-Wide investigation (read-only)"));
+					add(header, el("h1", "", str(data.question)));
+					const meta = el("div", "meta");
+					add(
+						meta,
+						metaItem("Status", labelOf(STATUS_LABEL, str(data.status))),
+						metaItem("Revision", int(data.revision)),
+						metaItem("Opened", when(data.createdAt)),
+						metaItem("Investigation", str(data.investigationId), true),
+						metaItem("Current run", str(data.currentRunId), true),
+						metaItem("Latest handoff", str(data.latestHandoffId), true),
+					);
+					add(root, add(header, meta));
+
+					const page = isObject(data.page) ? data.page : null;
+					if (page) {
+						const truncated = isObject(page.truncated) ? page.truncated : {};
+						const more = truncated.is === true || str(page.nextCursor) !== "";
+						if (more) {
+							add(
+								root,
+								el(
+									"p",
+									"card note",
+									"Partial page: more findings or decisions exist than are shown here" +
+										(str(truncated.reason) ? ` (${str(truncated.reason)}).` : "."),
+								),
+							);
+						}
+					}
+
+					const snapshots = list(data.snapshotIds);
+					add(root, el("h2", "", `Snapshots in scope (${snapshots.length})`));
+					add(root, renderSnapshots(data));
+
+					const decisions = list(data.decisions);
+					add(root, el("h2", "", `Human decisions (${decisions.length})`));
+					if (decisions.length) {
+						add(root, el("p", "note", "Human decisions outrank every finding below."));
+						const ol = el("ol");
+						for (let i = 0; i < decisions.length; i++) { add(ol, renderDecision(decisions[i])); }
+						add(root, ol);
+					} else { add(root, el("p", "empty", "No human decisions recorded.")); }
+
+					const findings = list(data.acceptedFindings);
+					add(root, el("h2", "", `Findings (${findings.length})`));
+					if (findings.length) {
+						const ul = el("ul");
+						for (let j = 0; j < findings.length; j++) { add(ul, renderFinding(findings[j])); }
+						add(root, ul);
+					} else { add(root, el("p", "empty", "No findings recorded for this revision.")); }
+
+					app.replaceChildren(root);
+				}
+
+				function renderState(text) {
+					const node = el("p", "empty", text);
+					node.id = "state";
+					node.setAttribute("role", "status");
+					app.replaceChildren(node);
+				}
+
+				function renderError(data) {
+					const box = el("section", "card error");
+					box.setAttribute("role", "alert");
+					add(box, el("h1", "", "Investigation unavailable"));
+					const code = isObject(data) ? str(data.code) : "";
+					const message = isObject(data) ? str(data.message) : "";
+					add(box, el("p", "statement", message || "The tool call did not return an investigation."));
+					if (code) { add(box, el("p", "mono", `code: ${code}`)); }
+					app.replaceChildren(box);
+				}
+
+				let shown = false;
+				function showOutput(data, isError) {
+					shown = true;
+					try {
+						if (isError !== true && isObject(data) && str(data.investigationId)) { renderInvestigation(data); }
+						else { renderError(data); }
+					} catch (_failure) {
+						renderError(null);
+					}
+				}
+
+				function setTheme(theme) {
+					if (theme === "light" || theme === "dark") {
+						document.documentElement.setAttribute("data-theme", theme);
+					}
+				}
+
+				// ---- ChatGPT compatibility surface (window.openai), when the host provides one ----
+				function readOpenAi() {
+					const host = window.openai;
+					if (!isObject(host)) { return; }
+					setTheme(host.theme);
+					if (host.toolOutput !== undefined && host.toolOutput !== null) { showOutput(host.toolOutput, false); }
+				}
+				window.addEventListener("openai:set_globals", readOpenAi, { passive: true });
+				readOpenAi();
+
+				// ---- MCP Apps bridge: JSON-RPC 2.0 over postMessage with the embedding host ----
+				const host = window.parent !== window ? window.parent : null;
+				const INITIALIZE_ID = 1;
+				let initialized = false;
+				function post(message) {
+					if (host) { host.postMessage(message, "*"); }
+				}
+				function reportSize() {
+					if (!initialized) { return; }
+					const box = document.documentElement.getBoundingClientRect();
+					post({
+						jsonrpc: "2.0",
+						method: "ui/notifications/size-changed",
+						params: { width: Math.ceil(box.width), height: Math.ceil(box.height) },
+					});
+				}
+				function applyHostContext(context) {
+					if (isObject(context)) { setTheme(context.theme); }
+				}
+				window.addEventListener(
+					"message",
+					(event) => {
+						if (!host || event.source !== host) { return; }
+						const message = event.data;
+						if (!isObject(message) || message.jsonrpc !== "2.0") { return; }
+						if (message.method === undefined) {
+							if (message.id !== INITIALIZE_ID || initialized) { return; }
+							if (isObject(message.result)) {
+								initialized = true;
+								applyHostContext(message.result.hostContext);
+								post({ jsonrpc: "2.0", method: "ui/notifications/initialized" });
+								reportSize();
+							}
+							return;
+						}
+						if (message.id !== undefined) {
+							// Host requests. This view keeps no state, so teardown and ping are acknowledged.
+							if (message.method === "ui/resource-teardown" || message.method === "ping") {
+								post({ jsonrpc: "2.0", id: message.id, result: {} });
+							}
+							else {
+								post({
+									jsonrpc: "2.0",
+									id: message.id,
+									error: { code: -32601, message: "Method not found" },
+								});
+							}
+							return;
+						}
+						if (message.method === "ui/notifications/tool-result") {
+							const result = isObject(message.params) ? message.params : {};
+							showOutput(result.structuredContent, result.isError === true);
+						} else if (message.method === "ui/notifications/tool-input") {
+							if (!shown) { renderState("Loading the investigation."); }
+						}
+						else if (message.method === "ui/notifications/tool-cancelled") {
+							renderState("The tool call was cancelled. Nothing to show.");
+						}
+						else if (message.method === "ui/notifications/host-context-changed") {
+							applyHostContext(message.params);
+						}
+					},
+					{ passive: true },
+				);
+				if (host) {
+					post({
+						jsonrpc: "2.0",
+						id: INITIALIZE_ID,
+						method: "ui/initialize",
+						params: {
+							protocolVersion: PROTOCOL_VERSION,
+							appInfo: { name: "think-wide-investigation", version: "1.0.0" },
+							appCapabilities: { availableDisplayModes: ["inline"] },
+						},
+					});
+					if (typeof ResizeObserver === "function") {
+						new ResizeObserver(reportSize).observe(document.documentElement);
+					}
+				}
+			})();
+		</script>
+	</body>
+</html>

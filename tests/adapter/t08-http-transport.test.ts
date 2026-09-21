@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { ErrorCode } from "@modelcontextprotocol/sdk/types.js";
 import { ConvexHttpClient } from "convex/browser";
 import type { FunctionReference } from "convex/server";
 import { convexTest } from "convex-test";
@@ -7,7 +9,12 @@ import { exportJWK, generateKeyPair, SignJWT } from "jose";
 import { afterEach, beforeAll, beforeEach, expect, test, vi } from "vitest";
 import schema from "../../convex/schema";
 import { OPERATION_LIMITS } from "../../core/limits";
-import { MCP_TOOL_NAMES } from "../../generated/mcp-tools";
+import {
+	MCP_APP_MIME_TYPE,
+	MCP_TOOL_NAMES,
+	MCP_TOOLS,
+	MCP_UI_RESOURCES,
+} from "../../generated/mcp-tools";
 import {
 	OPERATIONS,
 	UNIMPLEMENTED_OPERATIONS,
@@ -195,6 +202,100 @@ test("SDK Streamable HTTP initializes, lists generated inventory, excludes HTTP-
 		expect(keyFetch).toHaveBeenCalledTimes(1);
 	} finally {
 		await client.close();
+	}
+});
+
+test("Streamable HTTP serves the generated view binding and the static view; resources still need a valid MCP token", async () => {
+	const f = await fixture();
+	const client = await f.mcp(f.mcpA);
+	const other = await f.mcp(f.mcpB);
+	try {
+		const bound = MCP_TOOLS.filter((tool) => "_meta" in tool);
+		expect(bound.length).toBe(MCP_UI_RESOURCES.length);
+		const { tools } = await client.listTools();
+		for (const tool of tools)
+			expect(tool._meta).toEqual(
+				bound.find((item) => item.name === tool.name)?._meta,
+			);
+		expect((await client.listResources()).resources).toEqual(
+			MCP_UI_RESOURCES.map(({ template: _source, ...resource }) => resource),
+		);
+		for (const view of MCP_UI_RESOURCES) {
+			const mine = await client.readResource({ uri: view.uri });
+			expect(mine.contents).toEqual([
+				{
+					uri: view.uri,
+					mimeType: MCP_APP_MIME_TYPE,
+					text: readFileSync(
+						`src/server/mcp/apps/${view.template}.html`,
+						"utf8",
+					),
+					_meta: view._meta,
+				},
+			]);
+			// Static and identical for every principal: nothing user-specific is in the view.
+			expect(await other.readResource({ uri: view.uri })).toEqual(mine);
+			const read = {
+				jsonrpc: "2.0",
+				id: 7,
+				method: "resources/read",
+				params: { uri: view.uri },
+			};
+			for (const token of [undefined, "garbage", f.a]) {
+				const denied = await handleMcp(request(token, read));
+				expect(denied.status).toBe(401);
+				expect(await denied.text()).not.toContain("<!doctype");
+			}
+			const allowed = await handleMcp(request(f.mcpA, read));
+			expect(allowed.status).toBe(200);
+			expect(allowed.headers.get("Cache-Control")).toBe("no-store");
+		}
+		const list = { jsonrpc: "2.0", id: 8, method: "resources/list" };
+		expect((await handleMcp(request(undefined, list))).status).toBe(401);
+		await expect(
+			client.readResource({ uri: "ui://think-wide/missing.html" }),
+		).rejects.toMatchObject({ code: ErrorCode.InvalidParams });
+
+		// The bound tool still returns the validated result as structuredContent, and keeps its
+		// text content for hosts that render no view.
+		const created = (
+			await client.callTool({
+				name: "openInvestigation",
+				arguments: {
+					snapshotIds: ["shared_snapshot"],
+					question: "Render me",
+					requestKey: "http-view-0001",
+				},
+			})
+		).structuredContent as Investigation;
+		expect(bound.map((tool) => tool.name)).toContain("readInvestigation");
+		const args = { investigationId: created.investigationId };
+		const result = await client.callTool({
+			name: "readInvestigation",
+			arguments: args,
+		});
+		expect(result.isError).toBe(false);
+		expect(validators.Investigation(result.structuredContent)).toBe(true);
+		expect(result.structuredContent).toMatchObject({
+			question: "Render me",
+			status: "open",
+			revision: 0,
+		});
+		expect(result.content).toEqual([
+			{ type: "text", text: expect.stringContaining("structuredContent") },
+		]);
+		const foreign = await other.callTool({
+			name: "readInvestigation",
+			arguments: args,
+		});
+		expect(foreign.isError).toBe(true);
+		expect(foreign.structuredContent).toEqual({
+			code: "not_found",
+			message: "Resource not found",
+		});
+	} finally {
+		await client.close();
+		await other.close();
 	}
 });
 
