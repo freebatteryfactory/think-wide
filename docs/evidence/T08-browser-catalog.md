@@ -45,3 +45,10 @@ Revocation still applies on every backend read and receipt replay.
 Full gate result is appended after completion. No backend, VPS or hosted WorkOS
 user was changed. Status: **local real handlers + local browser component tests**.
 Deployed automatic claiming and a real hosted account-switch flow are NOT RUN here.
+
+Final gate after merging main `559f96e` (the reviewed MCP OAuth provider):
+`bun run verify` exited **0**, **52 test files / 741 tests passed**, no generated
+contract drift, TypeScript and production Vite build passed. The four browser
+cases above are additional to this gate. Full-page reload starts a fresh in-memory
+UI request key; backend idempotency still prevents duplicate grants and current
+revocation always applies. No browser persistent storage is introduced.
