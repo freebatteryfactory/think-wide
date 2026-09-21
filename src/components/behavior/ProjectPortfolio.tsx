@@ -1,4 +1,9 @@
-import { useConvexConnectionState, useMutation, useQuery } from "convex/react";
+import {
+	useConvexAuth,
+	useConvexConnectionState,
+	useMutation,
+	useQuery,
+} from "convex/react";
 import { useId, useRef, useState } from "react";
 import { api } from "../../../convex/_generated/api";
 import type {
@@ -9,13 +14,37 @@ import {
 	OpenInvestigationRequest as isOpenRequest,
 	Project as isProject,
 } from "../../../generated/validators.js";
+import { browserIdentityMode } from "../../lib/identity-mode";
 import { Button } from "../ui/button";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
+import { CatalogClaimGate } from "./CatalogClaimGate";
 import { SnapshotBrowser } from "./SnapshotBrowser";
 import { operationError, workbenchError } from "./workbench";
 
-export function ProjectPortfolio({ onOpen }: { onOpen: (id: string) => void }) {
+export function ProjectPortfolio(props: { onOpen: (id: string) => void }) {
+	return browserIdentityMode === "workos" ? (
+		<AuthenticatedPortfolio {...props} />
+	) : (
+		<PortfolioContents {...props} />
+	);
+}
+function AuthenticatedPortfolio(props: { onOpen: (id: string) => void }) {
+	const auth = useConvexAuth();
+	const claim = useMutation(api.catalog.claimDemoAccess);
+	if (auth.isLoading) {
+		return <output>Connecting…</output>;
+	}
+	if (!auth.isAuthenticated) {
+		return <output>Sign in to see your repositories.</output>;
+	}
+	return (
+		<CatalogClaimGate claim={claim}>
+			<PortfolioContents {...props} />
+		</CatalogClaimGate>
+	);
+}
+function PortfolioContents({ onOpen }: { onOpen: (id: string) => void }) {
 	const id = useId();
 	const connection = useConvexConnectionState();
 	const [cursor, setCursor] = useState<string>();
