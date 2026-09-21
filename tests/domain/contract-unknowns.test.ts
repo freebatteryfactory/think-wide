@@ -33,7 +33,7 @@ const proposal = {
 };
 
 test("0.6.0 preserves the same bounded unknowns in proposals and findings", () => {
-	expect(CONTRACT_VERSION).toBe("0.6.0");
+	expect(CONTRACT_VERSION).toBe("0.7.0");
 	expect(Finding(finding)).toBe(true);
 	for (const unknowns of [[], ["Question?"], Array(8).fill("x".repeat(512))]) {
 		expect(Finding({ ...finding, unknowns })).toBe(true);

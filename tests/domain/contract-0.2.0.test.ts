@@ -43,8 +43,8 @@ const paths = (validator: v.Validator) =>
 	(validator.errors ?? []).map((e) => e.instancePath).sort();
 
 describe("contract 0.2.0: version", () => {
-	it("is 0.6.0 after preserved claim unknowns", () => {
-		expect(CONTRACT_VERSION).toBe("0.6.0");
+	it("is 0.7.0 after the MCP Apps view binding", () => {
+		expect(CONTRACT_VERSION).toBe("0.7.0");
 	});
 });
 

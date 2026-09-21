@@ -1,6 +1,9 @@
 // Deterministic contract generation. No network, no model calls.
 //   bun scripts/codegen.ts            -> writes generated/
 //   bun scripts/codegen.ts <outDir>   -> writes elsewhere (used by check-drift)
+//   bun scripts/codegen.ts <outDir> <registry.json>
+//                                     -> same, from another registry file (used by the contract
+//                                        tests to prove that an invalid registry fails generation)
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import Ajv2020 from "ajv/dist/2020";
@@ -20,7 +23,10 @@ const schemas = files.map((f) =>
 	JSON.parse(readFileSync(join(schemaDir, f), "utf8")),
 );
 const registry = JSON.parse(
-	readFileSync(join(root, "contracts/operations.json"), "utf8"),
+	readFileSync(
+		resolve(process.argv[3] ?? join(root, "contracts/operations.json")),
+		"utf8",
+	),
 );
 
 // ---- validators (Ajv standalone, strict) ----
@@ -140,6 +146,67 @@ for (const op of ops) {
 		);
 	seenHandlers.set(op.handler, op.operationId);
 }
+
+type Json = Record<string, unknown>;
+const isObject = (v: unknown): v is Json =>
+	typeof v === "object" && v !== null && !Array.isArray(v);
+
+// ---- UI templates (MCP Apps views) ----
+// A template is a static ui:// resource. An operation binds one with `ui: { template }`. Both
+// shapes are closed: an unknown key, an unknown template, a non-ui:// URI or a binding on an
+// operation that is not MCP-exposed fails generation, the same way an unresolved schema ref does.
+const MCP_APP_MIME_TYPE = "text/html;profile=mcp-app";
+const templateName = /^[a-z][a-z0-9-]{0,63}$/;
+const templateUri = /^ui:\/\/think-wide\/[a-z0-9][a-z0-9._-]{0,127}$/;
+const exactKeys = (value: unknown, keys: string[], what: string) => {
+	if (!isObject(value)) throw new Error(`${what}: must be an object`);
+	const unknown = Object.keys(value).filter((k) => !keys.includes(k));
+	if (unknown.length)
+		throw new Error(`${what}: unknown properties [${unknown}]`);
+	for (const k of keys)
+		if (typeof value[k] !== "string" || value[k] === "")
+			throw new Error(`${what}: ${k} must be a non-empty string`);
+	return value as Record<string, string>;
+};
+const uiTemplates = new Map<string, Record<string, string>>();
+if (registry.uiTemplates !== undefined) {
+	if (!isObject(registry.uiTemplates))
+		throw new Error("uiTemplates: must be an object");
+	const seenUris = new Set<string>();
+	for (const [name, value] of Object.entries(registry.uiTemplates)) {
+		if (!templateName.test(name))
+			throw new Error(`uiTemplates.${name}: invalid template name`);
+		const template = exactKeys(
+			value,
+			["uri", "title", "description"],
+			`uiTemplates.${name}`,
+		);
+		if (!templateUri.test(template.uri as string))
+			throw new Error(
+				`uiTemplates.${name}: uri must match ${templateUri.source}`,
+			);
+		if (seenUris.has(template.uri as string))
+			throw new Error(`uiTemplates.${name}: duplicate uri`);
+		seenUris.add(template.uri as string);
+		uiTemplates.set(name, template);
+	}
+}
+const boundTemplates = new Set<string>();
+for (const op of ops) {
+	if (op.ui === undefined) continue;
+	const { template } = exactKeys(op.ui, ["template"], `${op.operationId}: ui`);
+	if (!uiTemplates.has(template as string))
+		throw new Error(`${op.operationId}: unknown ui template ${template}`);
+	if (!(op.exposure as string[]).includes("mcp"))
+		throw new Error(
+			`${op.operationId}: ui is only valid on an MCP-exposed operation`,
+		);
+	boundTemplates.add(template as string);
+}
+for (const name of uiTemplates.keys())
+	if (!boundTemplates.has(name))
+		throw new Error(`uiTemplates.${name}: not bound by any operation`);
+
 // Registry order everywhere, so output is a pure function of contracts/.
 const typeMap = (name: string, field: "requestType" | "responseType") =>
 	`export type ${name} = {\n${ops
@@ -203,7 +270,6 @@ export const UNIMPLEMENTED_OPERATIONS = ${JSON.stringify(unimplemented, null, "\
 // every transitively referenced definition is hoisted into the root `$defs` under a stable name
 // and every `$ref` becomes `#/$defs/<Name>`. Recursion stays a ref. Validation keywords are
 // copied verbatim; only `$id`, `$schema` and the nested `$defs` of a hoisted target are dropped.
-type Json = Record<string, unknown>;
 const SUBSCHEMA = new Set(
 	"items additionalProperties not if then else contains propertyNames unevaluatedItems unevaluatedProperties".split(
 		" ",
@@ -213,8 +279,6 @@ const SUBSCHEMA_LIST = new Set(["oneOf", "anyOf", "allOf", "prefixItems"]);
 const SUBSCHEMA_MAP = new Set(
 	"properties patternProperties dependentSchemas".split(" "),
 );
-const isObject = (v: unknown): v is Json =>
-	typeof v === "object" && v !== null && !Array.isArray(v);
 const schemaFile = (file: string): Json => {
 	const found = schemas.find((s) => s.$id === file);
 	if (!found) throw new Error(`mcp bundle: unknown schema file ${file}`);
@@ -300,6 +364,30 @@ const bundleSchema = (entryRef: string): Json => {
 		...(defs.size ? { $defs: sortedDefs } : {}),
 	};
 };
+// A bound tool carries the MCP Apps link (`_meta.ui.resourceUri`) and the ChatGPT compatibility
+// alias for the same URI. An unbound tool has no `_meta` at all.
+const uiToolMeta = (ui: { template: string } | undefined) => {
+	if (ui === undefined) return {};
+	const uri = uiTemplates.get(ui.template)?.uri;
+	return {
+		_meta: { ui: { resourceUri: uri }, "openai/outputTemplate": uri },
+	};
+};
+// One static resource per template. No CSP origins: the views load nothing and connect nowhere.
+const mcpUiResources = [...uiTemplates].map(([template, t]) => ({
+	template,
+	uri: t.uri,
+	name: template,
+	title: t.title,
+	description: t.description,
+	mimeType: MCP_APP_MIME_TYPE,
+	_meta: {
+		ui: {
+			csp: { connectDomains: [], resourceDomains: [] },
+			prefersBorder: true,
+		},
+	},
+}));
 const mcpTools = ops
 	.filter((o: Record<string, unknown>) =>
 		(o.exposure as string[]).includes("mcp"),
@@ -311,6 +399,7 @@ const mcpTools = ops
 		effect: o.effect,
 		handler: o.handler ?? null,
 		inputSchema: bundleSchema(o.request as string),
+		...uiToolMeta(o.ui as { template: string } | undefined),
 	}));
 // Fail generation, not a later adapter, if a bundle is not self-contained under strict Ajv.
 for (const tool of mcpTools)
@@ -327,6 +416,13 @@ export const MCP_TOOL_NAMES = ${JSON.stringify(
 	"\t",
 )} as const satisfies readonly OperationId[];
 export type McpToolName = (typeof MCP_TOOL_NAMES)[number];
+
+/** MIME type of an MCP Apps view (SEP-1865). ChatGPT renders the same type. */
+export const MCP_APP_MIME_TYPE = ${JSON.stringify(MCP_APP_MIME_TYPE)} as const;
+
+/** Static ui:// view resources, one per registry uiTemplate. \`template\` names the HTML source. */
+export const MCP_UI_RESOURCES = ${JSON.stringify(mcpUiResources, null, "\t")} as const;
+export type McpUiTemplate = (typeof MCP_UI_RESOURCES)[number]["template"];
 `;
 
 mkdirSync(outDir, { recursive: true });
