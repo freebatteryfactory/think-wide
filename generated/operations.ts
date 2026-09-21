@@ -27,7 +27,7 @@ import type {
 	SubmitProposalRequest,
 } from "./types";
 
-export const CONTRACT_VERSION = "0.5.0" as const;
+export const CONTRACT_VERSION = "0.6.0" as const;
 
 export const OPERATIONS = [
 	{
@@ -209,6 +209,9 @@ export const OPERATIONS = [
 		"response": "investigation.schema.json",
 		"effect": "read",
 		"handler": "investigations:readInvestigation",
+		"ui": {
+			"template": "investigation"
+		},
 		"exposure": [
 			"http",
 			"mcp"

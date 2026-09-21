@@ -134,3 +134,32 @@ back the whole claim rather than silently omitting entries. There is no catalog
 pagination. A new request key sees catalog additions; receipt replay returns its
 original snapshot set and rechecks current authorization and catalog epochs.
 This operation shares immutable sources, never investigations, decisions or briefs.
+
+## Contract 0.6.0: read-only view binding for MCP hosts (T08)
+
+The registry gains an optional top-level `uiTemplates` map and an optional per-operation
+`ui: { "template": "<name>" }`. A template is `{ uri, title, description }`; its `uri`
+must be `ui://think-wide/<file>`. Only `readInvestigation` is bound, to `investigation`
+(`ui://think-wide/investigation-v1.html`). No request or response schema changed, so
+every validator and type is byte-identical to 0.5.0.
+
+Both shapes are closed and checked by `scripts/codegen.ts`, the same place that checks
+handler bindings and schema refs: an unknown property, an unknown template, a URI
+outside `ui://think-wide/`, a binding on an operation that is not MCP-exposed, or a
+template no operation binds fails generation. `scripts/codegen.ts` takes an optional
+second argument (a registry path) so `tests/domain/contract-ui-binding.test.ts` can
+prove those rejections against the real generator.
+
+Codegen emits, in `generated/mcp-tools.ts`: `_meta.ui.resourceUri` plus the ChatGPT
+compatibility alias `_meta["openai/outputTemplate"]` on bound tools only (unbound tools
+have no `_meta`), `MCP_UI_RESOURCES` (uri, name, title, description, mimeType
+`text/html;profile=mcp-app`, and a resource `_meta.ui` that declares no CSP origins)
+and `MCP_APP_MIME_TYPE`. The MCP adapter serves these through `resources/list` and
+`resources/read` and restates none of them. `docs/OPERATIONS.md` gains a `ui` column.
+
+A view is presentation only. It is static, identical for every caller, carries no data
+and no authority, and is served without reading the caller's token; over HTTP the
+`/api/mcp` route still authenticates every request, including resource reads. All user
+data reaches a view only through the authorized tool call's `structuredContent`, and
+the view treats it as untrusted data (rule 11). A breaking change to a view publishes
+a new URI (hosts cache by URI). Tool behavior, authorization and results are unchanged.

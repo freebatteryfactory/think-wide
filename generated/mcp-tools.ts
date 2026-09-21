@@ -532,6 +532,12 @@ export const MCP_TOOLS = [
 					"pattern": "^[A-Za-z0-9_:.-]+$"
 				}
 			}
+		},
+		"_meta": {
+			"ui": {
+				"resourceUri": "ui://think-wide/investigation-v1.html"
+			},
+			"openai/outputTemplate": "ui://think-wide/investigation-v1.html"
 		}
 	},
 	{
@@ -1594,3 +1600,28 @@ export const MCP_TOOL_NAMES = [
 	"readHandoff"
 ] as const satisfies readonly OperationId[];
 export type McpToolName = (typeof MCP_TOOL_NAMES)[number];
+
+/** MIME type of an MCP Apps view (SEP-1865). ChatGPT renders the same type. */
+export const MCP_APP_MIME_TYPE = "text/html;profile=mcp-app" as const;
+
+/** Static ui:// view resources, one per registry uiTemplate. `template` names the HTML source. */
+export const MCP_UI_RESOURCES = [
+	{
+		"template": "investigation",
+		"uri": "ui://think-wide/investigation-v1.html",
+		"name": "investigation",
+		"title": "Investigation",
+		"description": "Read-only view of one investigation: question, status, revision, snapshots in scope, human decisions, and findings with their exact evidence references",
+		"mimeType": "text/html;profile=mcp-app",
+		"_meta": {
+			"ui": {
+				"csp": {
+					"connectDomains": [],
+					"resourceDomains": []
+				},
+				"prefersBorder": true
+			}
+		}
+	}
+] as const;
+export type McpUiTemplate = (typeof MCP_UI_RESOURCES)[number]["template"];

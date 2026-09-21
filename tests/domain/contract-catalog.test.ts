@@ -7,7 +7,7 @@ import {
 import * as validators from "../../generated/validators.js";
 
 test("catalog admission is generated, stateful and identity-free", () => {
-	expect(CONTRACT_VERSION).toBe("0.5.0");
+	expect(CONTRACT_VERSION).toBe("0.6.0");
 	const operation = OPERATIONS.find(
 		(item) => item.operationId === "claimDemoAccess",
 	);
